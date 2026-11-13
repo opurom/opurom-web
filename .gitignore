@@ -1,0 +1,9 @@
+node_modules/
+out/
+dist/
+coverage/
+*.log
+.DS_Store
+tmp/
+# Injected by the cross-layer harness; this repo must not add or modify .github.
+.github/
