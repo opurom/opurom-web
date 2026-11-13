@@ -1,0 +1,175 @@
+/* Per-node visual effects: gradient, shadow, glass, bg and border lower into
+ * the emitted inline CSS, mirroring opurom-render's fill/effects. The dashboard
+ * end-to-end check counts the gradients and shadows the web-dom build now
+ * produces, and a regression test keeps the breakpoints, fluid grid, Icon svg
+ * and canvas layer intact. */
+
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+
+import { emitFromIr } from '../lib/emit.mjs';
+import { cleanup, ir, node, ROOT, tmpDir } from '../test-helpers/helpers.mjs';
+
+/* One node carrying every effect prop, plus a text child to show the fill does
+ * not leak onto text and the text colour stays a foreground. */
+function effectIr(overrides = {}, theme = { mode: 'light', accent: '#097FEB', radius: 12 }) {
+  return ir(
+    node(0, 'Container', {
+      gradient: '#097FEB,#043B70',
+      shadow: 3,
+      glass: true,
+      bg: '#FFFFFF',
+      border: '#E4E9F2',
+      ...overrides,
+    }, [
+      node(1, 'Text', { value: 'hi', color: '#101828' }, []),
+    ]),
+    { theme },
+  );
+}
+
+function emitted(irValue) {
+  const dir = tmpDir();
+  const result = emitFromIr(irValue, dir);
+  return { dir, html: fs.readFileSync(result.indexPath, 'utf8') };
+}
+
+test('gradient, shadow and border lower to the matching CSS', () => {
+  const { dir, html } = emitted(effectIr({ glass: false }));
+  try {
+    assert.match(html, /background:linear-gradient\(to bottom, #097FEB, #043B70\)/);
+    assert.match(html, /box-shadow:0 3px 3px rgba\(0, 0, 0, 0\.15\)/);
+    assert.match(html, /border:1px solid #E4E9F2/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('bg and container fill color lower to background-color', () => {
+  const { dir, html } = emitted(effectIr({ gradient: undefined, shadow: undefined, glass: false, border: undefined }));
+  try {
+    // bg wins over the container fill color.
+    assert.match(html, /background-color:#FFFFFF/);
+    assert.doesNotMatch(html, /background-color:#1D4ED8/);
+  } finally {
+    cleanup(dir);
+  }
+  const fillOnly = emitted(effectIr({
+    gradient: undefined, shadow: undefined, glass: false, border: undefined, bg: undefined, color: '#1D4ED8',
+  }));
+  try {
+    assert.match(fillOnly.html, /background-color:#1D4ED8/);
+  } finally {
+    cleanup(fillOnly.dir);
+  }
+});
+
+test('a gradient wins over a flat bg for the background', () => {
+  const { dir, html } = emitted(effectIr({ glass: false }));
+  try {
+    assert.match(html, /background:linear-gradient\(to bottom, #097FEB, #043B70\)/);
+    assert.doesNotMatch(html, /background-color:#FFFFFF/, 'the gradient must replace the flat background');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('glass lowers a blur and a translucent fill that follows the theme', () => {
+  const light = emitted(effectIr({ gradient: undefined, shadow: undefined, border: undefined }));
+  try {
+    assert.match(light.html, /backdrop-filter:blur\(6px\)/);
+    assert.match(light.html, /background:rgba\(255, 255, 255, 0\.7\)/);
+  } finally {
+    cleanup(light.dir);
+  }
+  const dark = emitted(effectIr(
+    { gradient: undefined, shadow: undefined, border: undefined },
+    { mode: 'dark', accent: '#097FEB', radius: 12 },
+  ));
+  try {
+    assert.match(dark.html, /background:rgba\(17, 24, 39, 0\.7\)/);
+  } finally {
+    cleanup(dark.dir);
+  }
+});
+
+test('shadow zero or absent emits no box-shadow', () => {
+  const { dir, html } = emitted(effectIr({ shadow: 0, glass: false, gradient: undefined }));
+  try {
+    assert.doesNotMatch(html, /box-shadow/);
+  } finally {
+    cleanup(dir);
+  }
+  const none = emitted(effectIr({ shadow: undefined, glass: false, gradient: undefined }));
+  try {
+    assert.doesNotMatch(none.html, /box-shadow/);
+  } finally {
+    cleanup(none.dir);
+  }
+});
+
+test('bad gradient and border literals are ignored; a shadow clamps to the renderer bound', () => {
+  const { dir, html } = emitted(effectIr({
+    gradient: 'not-a-gradient', border: 'blue', glass: false, shadow: 9,
+  }));
+  try {
+    assert.doesNotMatch(html, /linear-gradient/);
+    assert.doesNotMatch(html, /border:1px solid blue/);
+    // The renderer clamps shadow to 0..8, so 9 lowers to the 8 px spread.
+    assert.match(html, /box-shadow:0 8px 8px rgba\(0, 0, 0, 0\.15\)/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('the dashboard web-dom build now carries gradients and shadows', () => {
+  const workspace = path.resolve(ROOT, '..');
+  const cli = path.join(workspace, 'opurom-cli', 'bin', 'opurom.mjs');
+  const src = path.join(workspace, 'opurom-examples', 'dashboard', 'main.opu');
+  if (!fs.existsSync(cli) || !fs.existsSync(src)) {
+    return;
+  }
+  const out = tmpDir();
+  try {
+    const result = spawnSync(process.execPath, [
+      cli, 'build', '--src', src, '--target', 'web-dom', '--out', out,
+    ], { encoding: 'utf8', timeout: 120_000, cwd: ROOT });
+    assert.equal(result.status, 0, `dashboard build failed:\n${result.stdout}${result.stderr}`);
+    const html = fs.readFileSync(path.join(out, 'index.html'), 'utf8');
+    const gradients = (html.match(/linear-gradient/g) ?? []).length;
+    const shadows = (html.match(/box-shadow/g) ?? []).length;
+    assert.ok(gradients > 0, `expected linear-gradient occurrences, got ${gradients}`);
+    assert.ok(shadows > 0, `expected box-shadow occurrences, got ${shadows}`);
+  } finally {
+    cleanup(out);
+  }
+});
+
+test('breakpoints, fluid grid, Icon svg and the canvas layer stay intact', () => {
+  const value = ir(
+    node(0, 'Column', {}, [
+      node(1, 'Icon', { name: 'star' }, []),
+      node(2, 'Grid', { columns: 2 }, [
+        node(3, 'Card', { bg: '#FFFFFF' }, []),
+        node(4, 'Card', { bg: '#FFFFFF' }, []),
+      ]),
+    ]),
+  );
+  const { dir, html } = emitted(value);
+  try {
+    const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+    for (const px of ['599px', '600px', '900px', '1200px', '1600px']) {
+      assert.ok(css.includes(px), `expected ${px} in the emitted CSS`);
+    }
+    assert.match(css, /\.grid \{ display: grid; gap: 12px; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); width: 100%; \}/);
+    assert.match(css, /\.grid-cols-2 \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
+    assert.match(html, /<svg[^>]*role="img"[^>]*aria-label="star"/);
+    assert.match(html, /<canvas id="fx" width="480" height="270" role="img"/);
+    assert.match(html, /name="viewport"/);
+  } finally {
+    cleanup(dir);
+  }
+});

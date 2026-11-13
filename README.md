@@ -288,6 +288,17 @@ name is emitted as the accessible name. A test asserts each icon emits a
 non-empty svg with a path, a known name maps to its canonical path, an unknown
 name renders the fallback, and the size and colour props apply.
 
+Node visual effects lower into the emitted inline CSS to match the renderer.
+`bg` becomes `background-color`, and the container kinds' `color` prop becomes
+their surface fill. `gradient` becomes
+`background:linear-gradient(to bottom, #A, #B)`, which wins over a flat
+background; `shadow` becomes a `box-shadow` spread clamped to the renderer's
+0..8 bound (none is emitted for zero or absent); `glass` adds
+`backdrop-filter:blur(6px)` and a translucent fill that follows the theme mode;
+and `border` becomes `border:1px solid <color>`. Unsupported colour or
+gradient literals are ignored. A test asserts each mapping, and the dashboard
+web-dom build now emits the gradients and shadows the native renderer shows.
+
 ## Design decisions
 
 - `system` theme resolves to `light` without querying the host, matching
