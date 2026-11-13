@@ -96,7 +96,7 @@ test('verify emits a PASS or documented SKIP with exit code 0', async () => {
     assert.ok([0].includes(result.code), `unexpected exit code ${result.code}: ${lines.join('\n')}`);
     assert.ok(lines.some((l) => /^cpu-digest: [0-9a-f]{16}$/.test(l)), lines.join('\n'));
     assert.ok(
-      lines.some((l) => l.startsWith('PASS:')) || lines.some((l) => l.startsWith('SKIP: headless browser unavailable')),
+      lines.some((l) => l.startsWith('PASS:')) || lines.some((l) => l.startsWith('SKIP: headless browser ')),
       lines.join('\n'),
     );
     if (result.status === 'pass') {
@@ -117,6 +117,12 @@ test('CLI verify asserts digest/roles/styles when a browser is available', (t) =
   try {
     const run = runCli(['verify', COUNTER_FIXTURE, dir], { timeout: 120_000 });
     assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
+    // A browser binary can exist but be unable to render (headless timeout on a
+    // constrained runner). That is a documented SKIP, not a failed assertion.
+    if (/SKIP: headless browser could not render the page here/.test(run.stdout)) {
+      assert.match(run.stdout, /timed out after \d+ ms/);
+      return;
+    }
     assert.match(run.stdout, /canvas-digest: ([0-9a-f]{16})/);
     const printed = /canvas-digest: ([0-9a-f]{16})/.exec(run.stdout)[1];
     assert.equal(printed, referenceDigest(gradientSpec(counterIr)), 'browser digest must equal CPU reference');

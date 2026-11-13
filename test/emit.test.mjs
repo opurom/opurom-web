@@ -49,7 +49,7 @@ test('emit bakes the theme accent and gradient canvas size into the page', () =>
     assert.match(html, /--accent: #4F46E5/);
     assert.match(html, /--radius: 12px/);
     assert.match(html, /#fx \{ display: block; width: 480px; height: 270px/);
-    assert.match(html, /var contract = \{"width":480,"height":270,/);
+    assert.match(html, /var CONTRACT = \{"width":480,"height":270,/);
   } finally {
     cleanup(dir);
   }
