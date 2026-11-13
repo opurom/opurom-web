@@ -299,6 +299,10 @@ and `border` becomes `border:1px solid <color>`. Unsupported colour or
 gradient literals are ignored. A test asserts each mapping, and the dashboard
 web-dom build now emits the gradients and shadows the native renderer shows.
 
+A node's `animate` curve lowers to a fixed 480ms entry animation that grows the
+box from its centre and fades it in, mapping the curve to a CSS timing function;
+`none` leaves the node static.
+
 ## Design decisions
 
 - `system` theme resolves to `light` without querying the host, matching
