@@ -101,12 +101,20 @@ applies the accessibility contract, resolves `{state}` interpolation and
    diverging rerun is a FAIL. A rerun that cannot launch or times out keeps
    the documented SKIP wording and exits **0**.
 
+The same run prints a `contrast:` line for the theme's declared
+onSurface/surface pair (theme tokens, else the mode palette): the WCAG 2.x
+contrast ratio computed in pure integer fixed point, compared against the
+WCAG AA normal-text minimum of 4.5:1. The line reports the resolved colors,
+the ratio, the threshold and whether the pair meets it; a pair below the
+threshold is a reported fact, not a verification failure.
+
 Example (this repository, Microsoft Edge on the macOS host, about 1.2 s wall
 clock for the two Chromium sessions):
 
 ```text
 emit: /tmp/.../index.html (6742 bytes)
 cpu-digest: 2013651856b88d65
+contrast: surface rgb(255, 255, 255) onSurface rgb(17, 24, 39) ratio 17.74:1, WCAG AA normal-text minimum 4.5:1 pass
 browser: /Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge
 canvas-digest: 2013651856b88d65
 rerun-canvas-digest: 2013651856b88d65
@@ -155,11 +163,11 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 67 tests
+node --test          # 71 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 67 pass, 0 skipped; the real two-engine
+- On the macOS host with both engines: 71 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -181,6 +189,7 @@ Test files (counts are `node --test <file>` totals):
 | `test/sub-op.test.mjs` | 2 | `sub` action validation |
 | `test/live-region.test.mjs` | 3 | one announcement per change, repeat suppression, markup-safe text |
 | `test/tokens.test.mjs` | 4 | token colors in the gradient spec, painter parity, emitted CSS, browser readback |
+| `test/contrast.test.mjs` | 4 | WCAG contrast ratios: exact vectors, fixed-point/float parity, verify output line |
 
 ## What is verified here
 
@@ -211,6 +220,11 @@ Verified in this repository, by tests in this repository:
   and the independent Node CPU reference; tests assert byte-identical RGBA,
   emitted CSS colors, the computed body background expectation and the
   single-engine browser digest.
+- WCAG 2.x contrast of the theme's declared onSurface/surface pair (tokens,
+  else the mode palette), computed in pure integer fixed point and asserted
+  against an independent floating-point implementation of the same formula
+  across the full 8-bit gray range, with the ratio and the 4.5:1 WCAG AA
+  normal-text minimum reported on every verify run.
 - Graceful per-engine `SKIP <engine>: <concrete reason>` with `digest=unmeasured`
   when a binary, macOS or WebKit.framework is unavailable; no engine SKIP is
   reported as a PASS. A single measured mismatch is FAIL with exit 1. Every
