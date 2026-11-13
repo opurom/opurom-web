@@ -54,8 +54,11 @@ applies the accessibility contract, resolves `{state}` interpolation and
 - **Canvas** — a `<canvas width="480" height="270">` painted by an inline,
   dependency-free integer pixel routine: a two-stop vertical gradient from the
   theme accent to the mode surface, a fixed highlight band, a 2 px border and
-  rounded corners from `theme.radius`. Deterministic, no floats in pixel
-  math, no host font or clock involved.
+  rounded corners from `theme.radius`, plus the opt-in `props.particles`
+  fields of the IR tree — integer dot placement from the field's seed and
+  index, a circle test on `radius` and a byte-alpha source-over blend, in
+  document order. Deterministic, no floats in pixel math, no host font or
+  clock involved.
 - **Theme token colors** — `theme.tokens.surface` and
   `theme.tokens.onSurface` replace the mode's surface and ink in the compiled
   gradient spec and in the page's `--surface` / `--ink` custom properties.
@@ -73,8 +76,8 @@ applies the accessibility contract, resolves `{state}` interpolation and
 
 1. Emits the page (same code path as `emit`).
 2. Computes the **independent Node CPU reference** digest
-   (`lib/cpu-reference.mjs`, a separate implementation of the gradient
-   recipe) over the same deterministic RGBA bytes — FNV-1a 64.
+   (`lib/cpu-reference.mjs`, a separate implementation of the gradient and
+   particle recipe) over the same deterministic RGBA bytes — FNV-1a 64.
 3. Detects a browser: `OPUROM_BROWSER` override, well-known macOS app paths
    (Edge/Chrome/Chromium), then a PATH scan for common binary names.
 4. If no browser is found, prints
@@ -163,11 +166,11 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 71 tests
+node --test          # 83 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 71 pass, 0 skipped; the real two-engine
+- On the macOS host with both engines: 83 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -183,12 +186,14 @@ Test files (counts are `node --test <file>` totals):
 | `test/emit.test.mjs` | 9 | structure, escaping, determinism, no-IR markers, CLI emit |
 | `test/aria.test.mjs` | 7 | role table, labels, bound controls, `when`, expectedAria contract |
 | `test/digest.test.mjs` | 6 | FNV vectors, page-vs-CPU byte equality, pinned golden |
+| `test/particles.test.mjs` | 7 | particle spec lowering, page-vs-CPU parity, divergent-painter check, bounds, browser readback |
 | `test/verify.test.mjs` | 7 | fact parsing, mismatch detection, real browser, SKIP, rerun determinism, ARIA readback |
 | `test/matrix.test.mjs` | 8 | report shape, real two-engine equality, cross-engine divergence, single mismatch FAIL, SKIP, timeout/cleanup |
 | `test/invalid-ir.test.mjs` | 21 | 16 IR rejection cases, out-dir/traversal, CLI usage |
 | `test/sub-op.test.mjs` | 2 | `sub` action validation |
 | `test/live-region.test.mjs` | 3 | one announcement per change, repeat suppression, markup-safe text |
 | `test/tokens.test.mjs` | 4 | token colors in the gradient spec, painter parity, emitted CSS, browser readback |
+| `test/theme-scale.test.mjs` | 5 | fontScale inheritance, local override, bounds, validation no-mutation |
 | `test/contrast.test.mjs` | 4 | WCAG contrast ratios: exact vectors, fixed-point/float parity, verify output line |
 
 ## What is verified here
@@ -216,6 +221,14 @@ Verified in this repository, by tests in this repository:
 - Deterministic integer canvas gradient (accent -> surface, band, border,
   rounded corners) with a pinned FNV-1a 64 golden digest and a byte-equality
   test between the page painter and the Node reference.
+- Deterministic particle fields from `props.particles`: the same integer dot
+  placement (avalanche hash of seed and index modulo the panel) and byte-alpha
+  source-over blend in both painters, asserted byte-identical against the CPU
+  reference for a particle fixture, pinned by its own golden digest, read back
+  from a real browser, and guarded by a deliberately divergent painter that
+  the parity check must reject. A counter fixture without the prop keeps its
+  golden digest, and a field outside the renderer's parse-time bounds is
+  ignored byte for byte.
 - Theme token colors lower into one gradient spec consumed by the page painter
   and the independent Node CPU reference; tests assert byte-identical RGBA,
   emitted CSS colors, the computed body background expectation and the
@@ -241,7 +254,10 @@ Verified in this repository, by tests in this repository:
   module) with the page painter; the implementations are separate code, but
   both were written by this project, not by a third-party oracle.
 - The canvas paints a fixed 480x270 panel; the IR does not carry viewport
-  geometry, so the panel size is a constant of this backend.
+  geometry, so the panel size is a constant of this backend. A node's
+  particle field therefore scatters over the whole panel, and the lowered
+  byte alpha is computed once in the shared spec so both painters blend the
+  same colour.
 - The page script is a compiled snapshot: the DOM is rendered from IR and the
   controls are presentational. IR event actions are not executed at runtime;
   callers push state changes through `window.opuromAnnounceState(name, value)`.

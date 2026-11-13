@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const BIN = path.join(ROOT, 'bin', 'opurom-web.mjs');
 export const COUNTER_FIXTURE = path.join(ROOT, 'fixtures', 'counter.opuir.json');
+export const PARTICLE_FIXTURE = path.join(ROOT, 'fixtures', 'particles.opuir.json');
 
 /* Runs the real CLI in a child process. A spawnSync timeout guarantees the
  * suite can never hang even if the CLI itself misbehaves. */

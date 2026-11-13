@@ -1,0 +1,53 @@
+{
+  "ir": "0.1",
+  "app": "Particle Panel",
+  "state": [
+    { "name": "count", "type": "int", "init": 0 }
+  ],
+  "tree": {
+    "id": 0,
+    "kind": "Column",
+    "props": {
+      "gap": 8,
+      "padding": 16,
+      "align": "center",
+      "particles": { "count": 48, "seed": 7, "radius": 2, "alpha": 512, "color": "#FF3B30" }
+    },
+    "children": [
+      {
+        "id": 1,
+        "kind": "Text",
+        "props": { "value": "Count: {count}", "size": 24, "particles": { "count": 0, "seed": 3 } },
+        "children": [],
+        "events": {}
+      },
+      {
+        "id": 2,
+        "kind": "Row",
+        "props": {
+          "gap": 8,
+          "particles": { "count": 12, "seed": 99, "radius": 0 }
+        },
+        "children": [
+          {
+            "id": 3,
+            "kind": "Button",
+            "props": { "label": "-" },
+            "children": [],
+            "events": { "tap": { "op": "add", "target": "count", "value": -1 } }
+          },
+          {
+            "id": 4,
+            "kind": "Button",
+            "props": { "label": "+" },
+            "children": [],
+            "events": { "tap": { "op": "add", "target": "count", "value": 1 } }
+          }
+        ],
+        "events": {}
+      }
+    ],
+    "events": {}
+  },
+  "theme": { "mode": "system", "accent": "#097FEB", "radius": 12 }
+}
