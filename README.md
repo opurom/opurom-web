@@ -278,6 +278,16 @@ grid class on the node, the compact collapse and the expanded fluid rule, and a
 real headless browser confirms the single-column collapse and the multi-column
 fill.
 
+`Icon` nodes emit an inline `svg` vector glyph, so the web target draws the
+same symbol the native renderer does. A table of canonical named icons in
+`lib/icons.mjs` supplies the 24x24 path data; a known `name` paints its stroke
+path, while an unknown name paints a deterministic neutral disc instead of a
+blank box. The `color` and `size` props set the glyph colour and rendered size,
+falling back to the theme accent and the renderer's default size, and the icon
+name is emitted as the accessible name. A test asserts each icon emits a
+non-empty svg with a path, a known name maps to its canonical path, an unknown
+name renders the fallback, and the size and colour props apply.
+
 ## Design decisions
 
 - `system` theme resolves to `light` without querying the host, matching
