@@ -11,7 +11,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-import { findBrowser, runBrowser } from '../lib/browser.mjs';
+import { browserEnvironmentFailure, findBrowser, runBrowser } from '../lib/browser.mjs';
 import { emitFromIr } from '../lib/emit.mjs';
 import { cleanup, ir, node, tmpDir } from '../test-helpers/helpers.mjs';
 
@@ -142,6 +142,10 @@ test('a real browser collapses the grid at compact and fills it at expanded', as
     const url = pathToFileURL(probePath).href;
 
     const compact = await runBrowser(browser.path, url, { windowSize: '480,600' });
+    if (browserEnvironmentFailure(compact)) {
+      t.skip(`headless browser could not start in this environment: ${compact.stderr.slice(0, 200)}`);
+      return;
+    }
     assert.equal(compact.code, 0, `compact run failed: ${compact.stderr}`);
     assert.match(compact.stdout, /data-cols="1"/);
 

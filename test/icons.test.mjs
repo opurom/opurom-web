@@ -9,7 +9,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-import { findBrowser, runBrowser } from '../lib/browser.mjs';
+import { browserEnvironmentFailure, findBrowser, runBrowser } from '../lib/browser.mjs';
 import { emitFromIr } from '../lib/emit.mjs';
 import { FALLBACK_ICON_PATH, ICON_NAMES, ICON_PATHS } from '../lib/icons.mjs';
 import { cleanup, ir, node, tmpDir } from '../test-helpers/helpers.mjs';
@@ -148,6 +148,10 @@ test('a real browser reports the icon svg with its path', async (t) => {
     const probePath = path.join(dir, 'probe.html');
     fs.writeFileSync(probePath, probe, 'utf8');
     const result = await runBrowser(browser.path, pathToFileURL(probePath).href, { windowSize: '1200,900' });
+    if (browserEnvironmentFailure(result)) {
+      t.skip(`headless browser could not start in this environment: ${result.stderr.slice(0, 200)}`);
+      return;
+    }
     assert.equal(result.code, 0, `browser run failed: ${result.stderr}`);
     assert.match(result.stdout, /data-svg="svg"/);
     assert.match(result.stdout, /data-path="[1-9][0-9]*"/);
