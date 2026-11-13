@@ -303,6 +303,13 @@ A node's `animate` curve lowers to a fixed 480ms entry animation that grows the
 box from its centre and fades it in, mapping the curve to a CSS timing function;
 `none` leaves the node static.
 
+The advanced controls lower to real DOM and SVG from the same IR props the
+native renderer consumes: `Table` and `Calendar` render their grids and
+deterministic cell values, `Chart` and `Map` render their deterministic SVG
+geometry, `Player` renders its track, filled portion and thumb, and `Menu`,
+`Tabs`, `Spinner`, `Tooltip` and `Divider` render their native-equivalent
+content.
+
 ## Design decisions
 
 - `system` theme resolves to `light` without querying the host, matching
