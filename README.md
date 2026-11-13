@@ -56,6 +56,11 @@ applies the accessibility contract, resolves `{state}` interpolation and
   theme accent to the mode surface, a fixed highlight band, a 2 px border and
   rounded corners from `theme.radius`. Deterministic, no floats in pixel
   math, no host font or clock involved.
+- **Theme token colors** — `theme.tokens.surface` and
+  `theme.tokens.onSurface` replace the mode's surface and ink in the compiled
+  gradient spec and in the page's `--surface` / `--ink` custom properties.
+  Each field falls back to the mode palette when absent, so IR without tokens
+  keeps the same canvas digest.
 - **Escaping** — all IR-derived text and attributes are HTML-escaped, so
   hostile IR content cannot inject markup or traverse out of the out-dir.
 - **State announcements** — a visually hidden `aria-live="polite"` region
@@ -150,11 +155,11 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 63 tests
+node --test          # 67 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 63 pass, 0 skipped; the real two-engine
+- On the macOS host with both engines: 67 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -175,6 +180,7 @@ Test files (counts are `node --test <file>` totals):
 | `test/invalid-ir.test.mjs` | 21 | 16 IR rejection cases, out-dir/traversal, CLI usage |
 | `test/sub-op.test.mjs` | 2 | `sub` action validation |
 | `test/live-region.test.mjs` | 3 | one announcement per change, repeat suppression, markup-safe text |
+| `test/tokens.test.mjs` | 4 | token colors in the gradient spec, painter parity, emitted CSS, browser readback |
 
 ## What is verified here
 
@@ -201,6 +207,10 @@ Verified in this repository, by tests in this repository:
 - Deterministic integer canvas gradient (accent -> surface, band, border,
   rounded corners) with a pinned FNV-1a 64 golden digest and a byte-equality
   test between the page painter and the Node reference.
+- Theme token colors lower into one gradient spec consumed by the page painter
+  and the independent Node CPU reference; tests assert byte-identical RGBA,
+  emitted CSS colors, the computed body background expectation and the
+  single-engine browser digest.
 - Graceful per-engine `SKIP <engine>: <concrete reason>` with `digest=unmeasured`
   when a binary, macOS or WebKit.framework is unavailable; no engine SKIP is
   reported as a PASS. A single measured mismatch is FAIL with exit 1. Every
@@ -211,6 +221,8 @@ Verified in this repository, by tests in this repository:
 
 - `system` theme resolves to `light` without querying the host, matching
   `opurom-render`'s determinism rule.
+- Theme token colors override the mode palette per field; absent fields keep
+  the mode defaults, so the counter fixture keeps its golden digest.
 - The independent CPU reference shares only the documented recipe (spec
   module) with the page painter; the implementations are separate code, but
   both were written by this project, not by a third-party oracle.
