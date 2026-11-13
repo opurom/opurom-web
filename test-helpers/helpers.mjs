@@ -53,7 +53,7 @@ export function ir(tree, overrides = {}) {
     app: 'Fixture',
     state: [],
     tree,
-    theme: { mode: 'light', accent: '#4F46E5', radius: 12 },
+    theme: { mode: 'light', accent: '#097FEB', radius: 12 },
     ...overrides,
   };
 }

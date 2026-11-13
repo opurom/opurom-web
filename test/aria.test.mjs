@@ -29,7 +29,7 @@ test('golden IR roles follow the contract default table', () => {
         node(4, 'Button', { label: '+' }),
       ]),
     ]),
-    theme: { mode: 'system', accent: '#4F46E5', radius: 12 },
+    theme: { mode: 'system', accent: '#097FEB', radius: 12 },
   };
   assert.deepEqual(expectedDom(counter), [
     { id: 0, tag: 'div', role: 'none' },

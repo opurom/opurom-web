@@ -27,7 +27,7 @@ test('fnv1a64 matches the published 64-bit FNV-1a vectors', () => {
 });
 
 test('counter fixture digest is pinned (recipe regression guard)', () => {
-  assert.equal(referenceDigest(gradientSpec(counterIr)), 'c02e6eee1be35749');
+  assert.equal(referenceDigest(gradientSpec(counterIr)), '2013651856b88d65');
 });
 
 test('page painter and Node CPU reference produce byte-identical RGBA', () => {

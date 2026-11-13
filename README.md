@@ -96,11 +96,11 @@ clock for the two Chromium sessions):
 
 ```text
 emit: /tmp/.../index.html (6742 bytes)
-cpu-digest: c02e6eee1be35749
+cpu-digest: 2013651856b88d65
 browser: /Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge
-canvas-digest: c02e6eee1be35749
-rerun-canvas-digest: c02e6eee1be35749
-PASS: verified canvas digest c02e6eee1be35749 equals independent Node CPU reference; 5 roles and 8 computed styles match
+canvas-digest: 2013651856b88d65
+rerun-canvas-digest: 2013651856b88d65
+PASS: verified canvas digest 2013651856b88d65 equals independent Node CPU reference; 5 roles and 8 computed styles match
 ```
 
 ### verify --matrix
@@ -135,11 +135,11 @@ Example measured on this macOS arm64 host (0.72 s wall clock):
 
 ```text
 emit: /tmp/.../index.html (6742 bytes)
-cpu-digest: c02e6eee1be35749
-chromium: digest=c02e6eee1be35749 equals-cpu-reference=true roles=5 styles=8
-webkit: digest=c02e6eee1be35749 equals-cpu-reference=true roles=5 styles=8
-cross-engine: chromium digest c02e6eee1be35749 equals webkit digest c02e6eee1be35749
-PASS: Chromium and WebKit measured digests both equal independent Node CPU reference c02e6eee1be35749
+cpu-digest: 2013651856b88d65
+chromium: digest=2013651856b88d65 equals-cpu-reference=true roles=5 styles=8
+webkit: digest=2013651856b88d65 equals-cpu-reference=true roles=5 styles=8
+cross-engine: chromium digest 2013651856b88d65 equals webkit digest 2013651856b88d65
+PASS: Chromium and WebKit measured digests both equal independent Node CPU reference 2013651856b88d65
 ```
 
 ## Tests

@@ -56,7 +56,7 @@ test('expectedStyles derives asserted computed styles from the IR', () => {
     mainDisplay: 'block',
     canvasDisplay: 'block',
     buttonDisplay: 'inline-flex',
-    buttonBackground: 'rgb(79, 70, 229)',
+    buttonBackground: 'rgb(9, 127, 235)',
     headingFontSize: '24px',
     bodyBackground: 'rgb(255, 255, 255)',
     canvasRadius: '12px',
