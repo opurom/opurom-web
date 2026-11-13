@@ -8,11 +8,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
+import { expectedDom } from '../lib/a11y.mjs';
 import { paintReference, referenceDigest } from '../lib/cpu-reference.mjs';
 import { emitFromIr } from '../lib/emit.mjs';
 import { PAGE_PAINT_SRC } from '../lib/page-source.mjs';
-import { gradientSpec } from '../lib/spec.mjs';
-import { verify } from '../lib/verify.mjs';
+import { gradientSpec, particleDots } from '../lib/spec.mjs';
+import { compareFacts, expectedAria, expectedDomFacts, expectedParticles, expectedStyles, verify } from '../lib/verify.mjs';
 import { cleanup, COUNTER_FIXTURE, PARTICLE_FIXTURE, tmpDir } from '../test-helpers/helpers.mjs';
 
 const counterIr = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
@@ -37,6 +38,49 @@ function irVariant(mutate) {
   const value = JSON.parse(JSON.stringify(particleIr));
   mutate(value);
   return value;
+}
+
+/* Reads the emitted DOM particle layer back into the fact shape the page
+ * reports, so the emitted markup can be compared with the spec-derived
+ * expectation without a browser. */
+function parseParticleLayer(html) {
+  const fields = [];
+  const fieldRe = /<div class="particle-field"([^>]*)>([\s\S]*?)<\/div>/g;
+  let match = fieldRe.exec(html);
+  while (match !== null) {
+    const attrs = match[1];
+    const body = match[2];
+    const number = (name) => {
+      const found = new RegExp(`${name}="(\\d+)"`).exec(attrs);
+      return found === null ? null : Number(found[1]);
+    };
+    const color = /data-color="([\d,]+)"/.exec(attrs)[1].split(',').map(Number);
+    const dots = [...body.matchAll(/<i class="particle-dot" data-x="(\d+)" data-y="(\d+)"/g)]
+      .map((dot) => ({ x: Number(dot[1]), y: Number(dot[2]) }));
+    fields.push({
+      field: number('data-field'),
+      count: number('data-count'),
+      seed: number('data-seed'),
+      radius: number('data-radius'),
+      alpha: number('data-alpha'),
+      color,
+      dots,
+    });
+    match = fieldRe.exec(html);
+  }
+  return fields;
+}
+
+function goldenFacts(irValue, specValue) {
+  const aria = expectedAria(irValue);
+  return {
+    digest: referenceDigest(specValue),
+    canvas: { width: specValue.width, height: specValue.height },
+    roles: expectedDom(irValue).map((entry) => ({ ...entry, ...aria.get(entry.id) })),
+    particles: expectedParticles(specValue),
+    dom: expectedDomFacts(irValue),
+    styles: expectedStyles(irValue, specValue),
+  };
 }
 
 test('particle fields lower into the shared spec with byte alpha and accent fallback', () => {
@@ -135,6 +179,80 @@ test('emit compiles particle fields into the page constants', () => {
   }
 });
 
+test('the DOM particle layer matches the expected DOM and is byte-deterministic', () => {
+  const spec = gradientSpec(particleIr);
+  const expected = expectedParticles(spec);
+  assert.ok(expected.length > 0, 'the particle fixture must paint at least one field');
+  const firstDir = tmpDir();
+  const secondDir = tmpDir();
+  try {
+    const first = emitFromIr(particleIr, firstDir);
+    const second = emitFromIr(particleIr, secondDir);
+    const firstHtml = fs.readFileSync(first.indexPath, 'utf8');
+    assert.equal(firstHtml, fs.readFileSync(second.indexPath, 'utf8'), 'identical IR must emit byte-identical HTML');
+    assert.deepEqual(parseParticleLayer(firstHtml), expected, 'emitted DOM layer must match the spec-derived DOM');
+  } finally {
+    cleanup(firstDir);
+    cleanup(secondDir);
+  }
+});
+
+test('the DOM particle layout equals the canvas painter dot placement', () => {
+  const spec = gradientSpec(particleIr);
+  const runtime = new Function(`${PAGE_PAINT_SRC}; return { opuDotCenter };`)();
+  const canvasLayers = [];
+  spec.particles.forEach((field, fieldIndex) => {
+    if (field.count === 0 || field.alpha === 0) return;
+    const dots = [];
+    for (let i = 0; i < field.count; i += 1) {
+      const [x, y] = runtime.opuDotCenter(field, i, spec.width, spec.height);
+      dots.push({ x, y });
+    }
+    canvasLayers.push({ field: fieldIndex, count: field.count, seed: field.seed, radius: field.radius, alpha: field.alpha, color: field.color, dots });
+  });
+  assert.deepEqual(canvasLayers, particleDots(spec), 'DOM and canvas must share one deterministic dot layout');
+});
+
+test('the DOM verification path catches a mutated particle layer', () => {
+  const spec = gradientSpec(particleIr);
+  const cpuDigest = referenceDigest(spec);
+  const facts = goldenFacts(particleIr, spec);
+  assert.deepEqual(compareFacts(facts, particleIr, spec, cpuDigest), [], 'golden facts must pass');
+
+  const movedDot = {
+    ...facts,
+    particles: facts.particles.map((layer, i) => (i === 0
+      ? { ...layer, dots: layer.dots.map((dot, d) => (d === 0 ? { ...dot, x: dot.x + 1 } : dot)) }
+      : layer)),
+  };
+  const dotFailure = compareFacts(movedDot, particleIr, spec, cpuDigest);
+  assert.equal(dotFailure.length, 1);
+  assert.match(dotFailure[0], /particle field 0 dot 0 mismatch/);
+
+  const movedField = {
+    ...facts,
+    particles: facts.particles.map((layer, i) => (i === 0 ? { ...layer, count: layer.count + 1 } : layer)),
+  };
+  const fieldFailure = compareFacts(movedField, particleIr, spec, cpuDigest);
+  assert.equal(fieldFailure.length, 1);
+  assert.match(fieldFailure[0], /particle field 0 count mismatch/);
+});
+
+test('the counter fixture keeps its pinned golden digest and an empty DOM particle layer', () => {
+  const spec = gradientSpec(counterIr);
+  assert.equal(referenceDigest(spec), '2013651856b88d65');
+  assert.deepEqual(expectedParticles(spec), []);
+  const dir = tmpDir();
+  try {
+    const emitted = emitFromIr(counterIr, dir);
+    const html = fs.readFileSync(emitted.indexPath, 'utf8');
+    assert.ok(html.includes('<div id="fx-particles" class="particle-layer" aria-hidden="true"></div>'));
+    assert.ok(!html.includes('<i class="particle-dot"'), 'a fixture without particles must not emit dots');
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('browser readback of the particle fixture equals the CPU reference', async () => {
   const dir = tmpDir();
   try {
@@ -144,6 +262,7 @@ test('browser readback of the particle fixture equals the CPU reference', async 
     const result = await verify(irPath, path.join(dir, 'out'), { log: (line) => lines.push(line) });
     const expected = referenceDigest(gradientSpec(particleIr));
     assert.notEqual(expected, '2013651856b88d65', 'particle fixture must not share the counter digest');
+    assert.ok(expectedParticles(gradientSpec(particleIr)).length > 0, 'browser parity must cover the particle layer');
     assert.equal(result.code, 0, lines.join('\n'));
     assert.ok(lines.includes(`cpu-digest: ${expected}`), lines.join('\n'));
     if (result.status === 'skip') {

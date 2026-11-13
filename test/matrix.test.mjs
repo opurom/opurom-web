@@ -14,7 +14,7 @@ import { DEFAULT_TIMEOUT_MS, findBrowser } from '../lib/browser.mjs';
 import { referenceDigest } from '../lib/cpu-reference.mjs';
 import { buildMatrixReport, verifyMatrix } from '../lib/matrix.mjs';
 import { gradientSpec } from '../lib/spec.mjs';
-import { expectedAria, expectedDomFacts, expectedStyles } from '../lib/verify.mjs';
+import { expectedAria, expectedDomFacts, expectedParticles, expectedStyles } from '../lib/verify.mjs';
 import { findWebKit, runWebKit } from '../lib/webkit.mjs';
 import { COUNTER_FIXTURE, ROOT, runCli, tmpDir, cleanup } from '../test-helpers/helpers.mjs';
 
@@ -42,6 +42,7 @@ function facts(digest = cpuDigest) {
     digest,
     canvas: { width: spec.width, height: spec.height },
     roles: expectedDom(counterIr).map((entry) => ({ ...entry, ...aria.get(entry.id) })),
+    particles: expectedParticles(spec),
     dom: expectedDomFacts(counterIr),
     styles: expectedStyles(counterIr, spec),
   };

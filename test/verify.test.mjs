@@ -14,7 +14,7 @@ import { expectedDom } from '../lib/a11y.mjs';
 import { findBrowser } from '../lib/browser.mjs';
 import { referenceDigest } from '../lib/cpu-reference.mjs';
 import { gradientSpec } from '../lib/spec.mjs';
-import { expectedAria, expectedDomFacts, expectedStyles, compareFacts, parseFacts, verify } from '../lib/verify.mjs';
+import { expectedAria, expectedDomFacts, expectedParticles, expectedStyles, compareFacts, parseFacts, verify } from '../lib/verify.mjs';
 import { COUNTER_FIXTURE, richIr, runCli, tmpDir, cleanup, writeJson } from '../test-helpers/helpers.mjs';
 
 const counterIr = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
@@ -30,6 +30,7 @@ test('parseFacts decodes the base64 facts blob the page writes into the DOM', ()
   const payload = {
     digest: 'abcdef0123456789',
     roles: [],
+    particles: [],
     styles: {},
     canvas: { width: 480, height: 270 },
     dom: { lang: 'en', title: 'Counter', h1: 'Counter', canvasLabel: 'Deterministic theme gradient' },
@@ -70,6 +71,7 @@ test('compareFacts flags digest, ARIA, dom, role and style mismatches', () => {
     digest: cpuDigest,
     canvas: { width: spec.width, height: spec.height },
     roles: goldenRoles(counterIr),
+    particles: expectedParticles(spec),
     dom: expectedDomFacts(counterIr),
     styles: expectedStyles(counterIr, spec),
   };

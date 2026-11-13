@@ -59,6 +59,12 @@ applies the accessibility contract, resolves `{state}` interpolation and
   index, a circle test on `radius` and a byte-alpha source-over blend, in
   document order. Deterministic, no floats in pixel math, no host font or
   clock involved.
+- **Particle DOM layer** — the same lowered particle fields are also rendered
+  as deterministic DOM/CSS: one container per field and one dot per hash
+  position, positioned with the same integer layout the canvas paints. The
+  layer is decorative (`aria-hidden`), and `verify` reads its attributes back
+  and compares them against the spec-derived expectation, so the DOM path is
+  parity-checked for particles exactly like the raster.
 - **Theme token colors** — `theme.tokens.surface` and
   `theme.tokens.onSurface` replace the mode's surface and ink in the compiled
   gradient spec and in the page's `--surface` / `--ink` custom properties.
@@ -166,11 +172,11 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 83 tests
+node --test          # 87 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 83 pass, 0 skipped; the real two-engine
+- On the macOS host with both engines: 87 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -186,7 +192,7 @@ Test files (counts are `node --test <file>` totals):
 | `test/emit.test.mjs` | 9 | structure, escaping, determinism, no-IR markers, CLI emit |
 | `test/aria.test.mjs` | 7 | role table, labels, bound controls, `when`, expectedAria contract |
 | `test/digest.test.mjs` | 6 | FNV vectors, page-vs-CPU byte equality, pinned golden |
-| `test/particles.test.mjs` | 7 | particle spec lowering, page-vs-CPU parity, divergent-painter check, bounds, browser readback |
+| `test/particles.test.mjs` | 11 | particle spec lowering, page-vs-CPU parity, divergent-painter check, DOM layer parity, bounds, browser readback |
 | `test/verify.test.mjs` | 7 | fact parsing, mismatch detection, real browser, SKIP, rerun determinism, ARIA readback |
 | `test/matrix.test.mjs` | 8 | report shape, real two-engine equality, cross-engine divergence, single mismatch FAIL, SKIP, timeout/cleanup |
 | `test/invalid-ir.test.mjs` | 21 | 16 IR rejection cases, out-dir/traversal, CLI usage |
@@ -228,7 +234,10 @@ Verified in this repository, by tests in this repository:
   from a real browser, and guarded by a deliberately divergent painter that
   the parity check must reject. A counter fixture without the prop keeps its
   golden digest, and a field outside the renderer's parse-time bounds is
-  ignored byte for byte.
+  ignored byte for byte. The same fields also render as a deterministic
+  DOM/CSS layer whose dot positions equal the canvas placement; the DOM
+  verification path reads that layer back and rejects a mutated dot or field,
+  while the counter fixture keeps an empty layer.
 - Theme token colors lower into one gradient spec consumed by the page painter
   and the independent Node CPU reference; tests assert byte-identical RGBA,
   emitted CSS colors, the computed body background expectation and the

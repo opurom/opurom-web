@@ -12,7 +12,7 @@ import { paintReference, referenceDigest } from '../lib/cpu-reference.mjs';
 import { emitFromIr } from '../lib/emit.mjs';
 import { PAGE_PAINT_SRC } from '../lib/page-source.mjs';
 import { gradientSpec } from '../lib/spec.mjs';
-import { compareFacts, expectedAria, expectedDomFacts, expectedStyles, verify } from '../lib/verify.mjs';
+import { compareFacts, expectedAria, expectedDomFacts, expectedParticles, expectedStyles, verify } from '../lib/verify.mjs';
 import { cleanup, COUNTER_FIXTURE, tmpDir, writeJson } from '../test-helpers/helpers.mjs';
 
 const counterIr = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
@@ -84,6 +84,7 @@ test('emitted CSS and verification expectations follow token colors', () => {
       digest: cpuDigest,
       canvas: { width: spec.width, height: spec.height },
       roles: expectedDom(value).map((entry) => ({ ...entry, ...aria.get(entry.id) })),
+      particles: expectedParticles(spec),
       dom: expectedDomFacts(value),
       styles: expectedStyles(value, spec),
     };
