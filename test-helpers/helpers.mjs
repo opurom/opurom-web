@@ -57,3 +57,29 @@ export function ir(tree, overrides = {}) {
     ...overrides,
   };
 }
+
+/* Fixture exercising the whole ARIA readback: non-ASCII title/labels (the
+ * facts blob must round-trip UTF-8), a heading, an image label, a bound
+ * slider value and initial-state checkboxes — none of which the counter
+ * fixture covers. */
+export function richIr() {
+  return ir(
+    node(0, 'Column', {}, [
+      node(1, 'Text', { value: 'Naïve count: {count}', size: 32 }),
+      node(2, 'Image', { name: 'Zoë icon' }),
+      node(3, 'Slider', { bind: 'level', min: 0, max: 10 }),
+      node(4, 'Switch', { bind: 'on' }),
+      node(5, 'Checkbox', { bind: 'off' }),
+      node(6, 'Button', { label: 'Go' }),
+    ]),
+    {
+      app: 'Résumé App',
+      state: [
+        { name: 'count', type: 'int', init: 7 },
+        { name: 'level', type: 'int', init: 4 },
+        { name: 'on', type: 'bool', init: true },
+        { name: 'off', type: 'bool', init: false },
+      ],
+    },
+  );
+}

@@ -74,24 +74,34 @@ applies the accessibility contract, resolves `{state}` interpolation and
    expiry and the profile is removed — the command can never hang and leaves
    no browser process behind).
 6. The page's own JS paints the canvas, reads it back with `getImageData`,
-   computes the FNV-1a 64 digest, collects DOM roles and computed styles, and
-   writes them base64-encoded into `<meta id="opurom-verify">`.
+   computes the FNV-1a 64 digest, collects every node's role with its ARIA
+   attributes (`aria-label`, `aria-level`, `aria-checked`, bound `value`),
+   document facts (`lang`, `title`, `<h1>` text, canvas label) and computed
+   styles, and writes them UTF-8-safe base64-encoded into
+   `<meta id="opurom-verify">`.
 7. `verify` parses those facts from the dump and asserts: browser digest
-   **equals the Node CPU reference**, plus every ARIA role and computed style
-   (header/main/canvas `display`, button display and background, heading font
-   size) against IR-derived expectations.
+   **equals the Node CPU reference**, plus every ARIA attribute, document
+   fact and computed style (header/main/canvas `display`, button display and
+   background, heading font size, body background, canvas border radius)
+   against IR-derived expectations.
+8. Renders the same emitted page a **second time in a fresh browser session**
+   and asserts the rerun facts against the same expectations, printing
+   `rerun-canvas-digest: <digest>`. Because both runs are pinned to the CPU
+   reference, equal rerun digests prove the render is deterministic; a
+   diverging rerun is a FAIL. A rerun that cannot launch or times out keeps
+   the documented SKIP wording and exits **0**.
 
-Example (this repository, Microsoft Edge on the macOS host):
+Example (this repository, Microsoft Edge on the macOS host, about 1.2 s wall
+clock for the two Chromium sessions):
 
 ```text
-emit: /tmp/.../index.html (5936 bytes)
+emit: /tmp/.../index.html (6742 bytes)
 cpu-digest: c02e6eee1be35749
 browser: /Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge
 canvas-digest: c02e6eee1be35749
-PASS: verified canvas digest c02e6eee1be35749 equals independent Node CPU reference; 5 roles and 6 computed styles match
+rerun-canvas-digest: c02e6eee1be35749
+PASS: verified canvas digest c02e6eee1be35749 equals independent Node CPU reference; 5 roles and 8 computed styles match
 ```
-
-The single-engine `verify` command and its output are unchanged.
 
 ### verify --matrix
 
@@ -101,13 +111,19 @@ The single-engine `verify` command and its output are unchanged.
   exactly as single-engine `verify` does.
 - **WebKit** — a compiled Swift helper opens a real `WKWebView`, loads the
   same generated `index.html` contents with `loadHTMLString`, then evaluates
-  JavaScript that calls `getImageData`, hashes those pixels and reads DOM roles
-  and computed styles from the live page. This is WebKit/Safari's engine, not
-  the Safari application or a browser simulator.
+  JavaScript that calls `getImageData`, hashes those pixels and reads DOM
+  roles with their ARIA attributes, document facts and computed styles from
+  the live page. This is WebKit/Safari's engine, not the Safari application
+  or a browser simulator.
 
-Both engine digests and equality flags are reported individually. A single
-measured mismatch or DOM-fact failure produces `FAIL` and exit **1**; there is
-no averaging and no partial mismatch pass. On non-macOS hosts, or when an
+Both engine digests and equality flags are reported individually, and every
+engine is pinned to the CPU reference before it may count as passed. When
+both engines measure, the report also asserts **cross-engine agreement**:
+the two digests must equal each other, and a disagreement adds
+`cross-engine digest mismatch: chromium=... webkit=...; diverged from Node
+reference: <engine>` naming the diverging engine. A single measured mismatch
+or DOM-fact failure produces `FAIL` and exit **1**; there is no averaging and
+no partial mismatch pass. On non-macOS hosts, or when an
 engine binary/`xcrun`/`WebKit.framework` is missing, the report prints
 `SKIP <engine>: <concrete reason>` and `digest=unmeasured`; the other engine's
 real result is retained. If no engine is available, the matrix exits **0**
@@ -115,24 +131,25 @@ with a documented SKIP. Each Swift helper and WebKit process group has one
 bounded <=30 s budget, is SIGKILLed at its deadline, and has its temporary
 compiled-helper/profile directory removed.
 
-Example measured on this macOS arm64 host:
+Example measured on this macOS arm64 host (0.72 s wall clock):
 
 ```text
-emit: /tmp/.../index.html (5936 bytes)
+emit: /tmp/.../index.html (6742 bytes)
 cpu-digest: c02e6eee1be35749
-chromium: digest=c02e6eee1be35749 equals-cpu-reference=true roles=5 styles=6
-webkit: digest=c02e6eee1be35749 equals-cpu-reference=true roles=5 styles=6
+chromium: digest=c02e6eee1be35749 equals-cpu-reference=true roles=5 styles=8
+webkit: digest=c02e6eee1be35749 equals-cpu-reference=true roles=5 styles=8
+cross-engine: chromium digest c02e6eee1be35749 equals webkit digest c02e6eee1be35749
 PASS: Chromium and WebKit measured digests both equal independent Node CPU reference c02e6eee1be35749
 ```
 
 ## Tests
 
 ```sh
-node --test          # 55 tests
+node --test          # 58 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 55 pass, 0 skipped; the real two-engine
+- On the macOS host with both engines: 58 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -146,10 +163,10 @@ Test files (counts are `node --test <file>` totals):
 | File | Tests | Covers |
 | --- | --- | --- |
 | `test/emit.test.mjs` | 9 | structure, escaping, determinism, no-IR markers, CLI emit |
-| `test/aria.test.mjs` | 6 | role table, labels, bound controls, `when` |
+| `test/aria.test.mjs` | 7 | role table, labels, bound controls, `when`, expectedAria contract |
 | `test/digest.test.mjs` | 6 | FNV vectors, page-vs-CPU byte equality, pinned golden |
-| `test/verify.test.mjs` | 6 | fact parsing, mismatch detection, real browser, SKIP |
-| `test/matrix.test.mjs` | 7 | report shape, real two-engine equality, single mismatch FAIL, SKIP, timeout/cleanup |
+| `test/verify.test.mjs` | 7 | fact parsing, mismatch detection, real browser, SKIP, rerun determinism, ARIA readback |
+| `test/matrix.test.mjs` | 8 | report shape, real two-engine equality, cross-engine divergence, single mismatch FAIL, SKIP, timeout/cleanup |
 | `test/invalid-ir.test.mjs` | 21 | 16 IR rejection cases, out-dir/traversal, CLI usage |
 
 ## What is verified here
@@ -159,8 +176,19 @@ Verified in this repository, by tests in this repository:
 - Two real desktop engines on one macOS arm64 host: headless Microsoft Edge
   (Chromium) and real `WKWebView` (WebKit, Safari's engine). `verify --matrix`
   loads the same emitted `index.html` in both, measures each `getImageData`
-  digest and DOM roles/computed styles, and compares each digest with the
-  independent Node CPU reference. The single-engine `verify` remains Chromium.
+  digest and DOM roles/ARIA/styles, compares each digest with the
+  independent Node CPU reference, and asserts the two engine digests equal
+  each other with the diverging engine named on disagreement. The
+  single-engine `verify` remains Chromium.
+- Render determinism: single-engine `verify` renders the same emitted page in
+  two fresh browser sessions and requires identical facts, reported as
+  `canvas-digest` plus `rerun-canvas-digest` before any PASS.
+- The accessibility contract as read back from the live page, not just from
+  emitted HTML: per-node `aria-label`, `aria-level`, `aria-checked` and bound
+  slider `value`, plus document `lang`/`title`/`<h1>` text and the canvas
+  label — including non-ASCII IR text round-tripped through the UTF-8 facts
+  blob — and computed body background and canvas border radius alongside the
+  existing display/font-size styles.
 - Semantic DOM emission with the accessibility contract's roles, labels and
   initial-state binding, HTML-escaped end to end.
 - Deterministic integer canvas gradient (accent -> surface, band, border,
@@ -184,6 +212,7 @@ Verified in this repository, by tests in this repository:
 - The page script is a compiled snapshot: the DOM is rendered from IR and the
   controls are presentational.
 - The browser matrix runs the desktop engines available on the host; each
-  engine reports its own digest and the CPU reference decides the verdict.
+  engine reports its own digest, the CPU reference decides each verdict, and
+  two measured engines must also agree with each other.
 - The WKWebView helper is compiled on each matrix run, so the helper always
   matches the macOS SDK and toolchain present on that host.

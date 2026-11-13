@@ -8,7 +8,8 @@ import test from 'node:test';
 
 import { effectiveRole, expectedDom, labelOf, textFontSize } from '../lib/a11y.mjs';
 import { emitFromIr } from '../lib/emit.mjs';
-import { cleanup, ir, node, tmpDir } from '../test-helpers/helpers.mjs';
+import { expectedAria, expectedDomFacts } from '../lib/verify.mjs';
+import { cleanup, ir, node, richIr, tmpDir } from '../test-helpers/helpers.mjs';
 
 function emit(irValue) {
   const dir = tmpDir();
@@ -111,4 +112,28 @@ test('expectedDom skips when-hidden nodes exactly like the emitter', () => {
   } finally {
     cleanup(dir);
   }
+});
+
+test('expectedAria mirrors the emitter ARIA contract and initial state', () => {
+  const value = richIr();
+  const aria = expectedAria(value);
+  assert.deepEqual([...aria.keys()], [0, 1, 2, 3, 4, 5, 6]);
+  // Container: no text, so no aria-label; nothing else applies.
+  assert.deepEqual(aria.get(0), { ariaLabel: null, ariaLevel: null, ariaChecked: null, value: null });
+  // Heading: level 2, text carried by the element itself.
+  assert.deepEqual(aria.get(1), { ariaLabel: null, ariaLevel: '2', ariaChecked: null, value: null });
+  // Image: accessible name from the label chain, interpolated.
+  assert.deepEqual(aria.get(2), { ariaLabel: 'Zoë icon', ariaLevel: null, ariaChecked: null, value: null });
+  // Slider: bound initial value as string, no label.
+  assert.deepEqual(aria.get(3), { ariaLabel: null, ariaLevel: null, ariaChecked: null, value: '4' });
+  // Switch/Checkbox: aria-checked from initial state.
+  assert.deepEqual(aria.get(4), { ariaLabel: null, ariaLevel: null, ariaChecked: 'true', value: null });
+  assert.deepEqual(aria.get(5), { ariaLabel: null, ariaLevel: null, ariaChecked: 'false', value: null });
+  assert.deepEqual(aria.get(6), { ariaLabel: null, ariaLevel: null, ariaChecked: null, value: null });
+  assert.deepEqual(expectedDomFacts(value), {
+    lang: 'en',
+    title: 'Résumé App',
+    h1: 'Résumé App',
+    canvasLabel: 'Deterministic theme gradient',
+  });
 });

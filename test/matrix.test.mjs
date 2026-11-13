@@ -1,6 +1,7 @@
-/* Browser matrix tests: pure report semantics, a real two-engine CLI run,
- * single-engine failure, WebKit SKIPs, bounded helper timeout and cleanup.
- * Browser-dependent tests self-skip with a concrete reason. */
+/* Browser matrix tests: pure report semantics including cross-engine digest
+ * agreement, a real two-engine CLI run, single-engine failure, WebKit SKIPs,
+ * bounded helper timeout and cleanup. Browser-dependent tests self-skip with a
+ * concrete reason. */
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -13,7 +14,7 @@ import { DEFAULT_TIMEOUT_MS, findBrowser } from '../lib/browser.mjs';
 import { referenceDigest } from '../lib/cpu-reference.mjs';
 import { buildMatrixReport, verifyMatrix } from '../lib/matrix.mjs';
 import { gradientSpec } from '../lib/spec.mjs';
-import { expectedStyles } from '../lib/verify.mjs';
+import { expectedAria, expectedDomFacts, expectedStyles } from '../lib/verify.mjs';
 import { findWebKit, runWebKit } from '../lib/webkit.mjs';
 import { COUNTER_FIXTURE, ROOT, runCli, tmpDir, cleanup } from '../test-helpers/helpers.mjs';
 
@@ -28,7 +29,7 @@ function engine(overrides = {}) {
     digest: cpuDigest,
     equalsReference: true,
     roles: 5,
-    styles: 6,
+    styles: 8,
     failures: [],
     reason: null,
     ...overrides,
@@ -36,10 +37,12 @@ function engine(overrides = {}) {
 }
 
 function facts(digest = cpuDigest) {
+  const aria = expectedAria(counterIr);
   return {
     digest,
     canvas: { width: spec.width, height: spec.height },
-    roles: expectedDom(counterIr),
+    roles: expectedDom(counterIr).map((entry) => ({ ...entry, ...aria.get(entry.id) })),
+    dom: expectedDomFacts(counterIr),
     styles: expectedStyles(counterIr, spec),
   };
 }
@@ -61,6 +64,7 @@ test('matrix report preserves both engine digests and equality flags', () => {
   assert.deepEqual(report.passed, ['chromium', 'webkit']);
   assert.deepEqual(report.skipped, []);
   assert.deepEqual(report.failures, []);
+  assert.deepEqual(report.crossEngine, { checked: true, agree: true });
 });
 
 test('a single-engine digest mismatch fails the whole matrix', () => {
@@ -75,6 +79,30 @@ test('a single-engine digest mismatch fails the whole matrix', () => {
   assert.equal(report.status, 'fail');
   assert.deepEqual(report.passed, ['chromium']);
   assert.match(report.failures.join('\n'), /^webkit: canvas digest mismatch/m);
+});
+
+test('cross-engine digest disagreement fails and names the diverging engine', () => {
+  const other = '1111111111111111';
+  const report = buildMatrixReport({
+    chromium: engine(),
+    webkit: engine({ digest: other, failures: [] }),
+  }, cpuDigest);
+  assert.equal(report.code, 1);
+  assert.equal(report.status, 'fail');
+  assert.deepEqual(report.crossEngine, { checked: true, agree: false });
+  // Both engines must be pinned to the CPU reference, so the engine whose
+  // digest is not the reference one is the one that diverged.
+  assert.deepEqual(report.passed, ['chromium']);
+  assert.ok(
+    report.failures.some((f) => f === `webkit: digest=${other} equals-cpu-reference=true`),
+    report.failures.join('\n'),
+  );
+  assert.ok(
+    report.failures.some(
+      (f) => f === `cross-engine digest mismatch: chromium=${cpuDigest} webkit=${other}; diverged from Node reference: webkit`,
+    ),
+    report.failures.join('\n'),
+  );
 });
 
 test('WebKit SKIP keeps the Chromium result without faking a second pass', async () => {
@@ -102,6 +130,7 @@ test('WebKit SKIP keeps the Chromium result without faking a second pass', async
     assert.equal(report.engines.webkit.status, 'skip');
     assert.equal(report.engines.webkit.digest, null);
     assert.equal(report.engines.webkit.equalsReference, null);
+    assert.deepEqual(report.crossEngine, { checked: false, agree: null });
     assert.match(lines.join('\n'), /^SKIP webkit: WKWebView requires macOS \(host is linux\)$/m);
     assert.match(lines.join('\n'), /^webkit: digest=unmeasured equals-cpu-reference=n\/a$/m);
     assert.ok(!lines.some((line) => /^PASS: Chromium and WebKit/m.test(line)));
@@ -148,11 +177,15 @@ test('CLI verify --matrix measures both real engines against the CPU reference',
     assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
     assert.match(run.stdout, new RegExp(`^cpu-digest: ${cpuDigest}$`, 'm'));
     for (const name of ['chromium', 'webkit']) {
-      const line = new RegExp(`^${name}: digest=([0-9a-f]{16}) equals-cpu-reference=true roles=5 styles=6$`, 'm');
+      const line = new RegExp(`^${name}: digest=([0-9a-f]{16}) equals-cpu-reference=true roles=5 styles=8$`, 'm');
       const match = line.exec(run.stdout);
       assert.ok(match, `missing measured ${name} line: ${run.stdout}`);
       assert.equal(match[1], cpuDigest, `${name} digest must equal the independent Node CPU reference`);
     }
+    assert.match(
+      run.stdout,
+      /^cross-engine: chromium digest [0-9a-f]{16} equals webkit digest [0-9a-f]{16}$/m,
+    );
     assert.match(run.stdout, /^PASS: Chromium and WebKit measured digests both equal independent Node CPU reference/m);
     assert.ok(!run.stdout.includes('SKIP'), 'both engines are available, so no skip is expected');
   } finally {
@@ -174,7 +207,7 @@ printf '<html><head><meta id="opurom-verify" data-result="%s" data-ready="1"></h
       timeout: 120_000,
     });
     assert.equal(run.status, 1, `${run.stdout}\n${run.stderr}`);
-    assert.match(run.stdout, /^chromium: digest=0000000000000000 equals-cpu-reference=false roles=5 styles=6$/m);
+    assert.match(run.stdout, /^chromium: digest=0000000000000000 equals-cpu-reference=false roles=5 styles=8$/m);
     assert.match(run.stdout, /^error: chromium: canvas digest mismatch/m);
     assert.match(run.stdout, /^FAIL: at least one engine does not satisfy independent Node CPU reference/m);
     assert.ok(!/^PASS:/m.test(run.stdout), 'one mismatch must not produce a PASS');
