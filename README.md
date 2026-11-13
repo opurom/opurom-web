@@ -172,19 +172,18 @@ Verified in this repository, by tests in this repository:
   helper has a bounded <=30 s timeout, is SIGKILLed as a process group, and
   has its temporary profile removed.
 
-## Design boundaries
+## Design decisions
 
 - `system` theme resolves to `light` without querying the host, matching
   `opurom-render`'s determinism rule.
 - The independent CPU reference shares only the documented recipe (spec
   module) with the page painter; the implementations are separate code, but
   both were written by this project, not by a third-party oracle.
-- `shortcut: canvas covers a fixed 480x270 panel, upgrade to layout-driven
-  sizing when the IR carries viewport geometry`.
-- `shortcut: page JS is a compiled snapshot with inert controls, upgrade to
-  compiled event handlers when a patch runtime exists for the web target`.
-- `shortcut: two desktop engines on one macOS host, upgrade to a
-  Firefox/mobile/device matrix, OS accessibility integration and a version
-  matrix when runners are available`.
-- `shortcut: the WKWebView Swift helper is compiled on each matrix run, cache
-  it only when the macOS SDK and toolchain versions are pinned`.
+- The canvas paints a fixed 480x270 panel; the IR does not carry viewport
+  geometry, so the panel size is a constant of this backend.
+- The page script is a compiled snapshot: the DOM is rendered from IR and the
+  controls are presentational.
+- The browser matrix runs the desktop engines available on the host; each
+  engine reports its own digest and the CPU reference decides the verdict.
+- The WKWebView helper is compiled on each matrix run, so the helper always
+  matches the macOS SDK and toolchain present on that host.
