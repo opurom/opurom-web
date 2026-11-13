@@ -58,6 +58,11 @@ applies the accessibility contract, resolves `{state}` interpolation and
   math, no host font or clock involved.
 - **Escaping** — all IR-derived text and attributes are HTML-escaped, so
   hostile IR content cannot inject markup or traverse out of the out-dir.
+- **State announcements** — a visually hidden `aria-live="polite"` region
+  plus `window.opuromAnnounceState(name, value)`. The first change from the
+  IR's initial value writes `<name>: <value>` as text exactly once; repeated
+  identical values write nothing. Embedded IR values escape `<`, and
+  announcements use `textContent`, never markup.
 
 ### verify
 
@@ -145,11 +150,11 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 58 tests
+node --test          # 63 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 58 pass, 0 skipped; the real two-engine
+- On the macOS host with both engines: 63 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -168,6 +173,8 @@ Test files (counts are `node --test <file>` totals):
 | `test/verify.test.mjs` | 7 | fact parsing, mismatch detection, real browser, SKIP, rerun determinism, ARIA readback |
 | `test/matrix.test.mjs` | 8 | report shape, real two-engine equality, cross-engine divergence, single mismatch FAIL, SKIP, timeout/cleanup |
 | `test/invalid-ir.test.mjs` | 21 | 16 IR rejection cases, out-dir/traversal, CLI usage |
+| `test/sub-op.test.mjs` | 2 | `sub` action validation |
+| `test/live-region.test.mjs` | 3 | one announcement per change, repeat suppression, markup-safe text |
 
 ## What is verified here
 
@@ -210,7 +217,8 @@ Verified in this repository, by tests in this repository:
 - The canvas paints a fixed 480x270 panel; the IR does not carry viewport
   geometry, so the panel size is a constant of this backend.
 - The page script is a compiled snapshot: the DOM is rendered from IR and the
-  controls are presentational.
+  controls are presentational. IR event actions are not executed at runtime;
+  callers push state changes through `window.opuromAnnounceState(name, value)`.
 - The browser matrix runs the desktop engines available on the host; each
   engine reports its own digest, the CPU reference decides each verdict, and
   two measured engines must also agree with each other.
