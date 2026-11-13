@@ -144,3 +144,21 @@ test('CLI emit reports the output path and exits 0', () => {
     cleanup(dir);
   }
 });
+
+test('emit accepts an input event bound to an int state', () => {
+  // A Slider bound to an int state carries a raw input event whose value is a
+  // string at runtime; the emitter must accept it and coerce to int.
+  const tree = node(0, 'Column', {}, [
+    node(1, 'Slider', { bind: 'load', min: 0, max: 100 }, [], { input: { op: 'set', target: 'load' } }),
+  ]);
+  const data = ir(tree, { state: [{ name: 'load', type: 'int', init: 64 }] });
+  const dir = tmpDir();
+  try {
+    const result = emitFromIr(data, dir);
+    const html = fs.readFileSync(result.indexPath, 'utf8');
+    assert.match(html, /type="range"/);
+    assert.match(html, /parseInt/);
+  } finally {
+    cleanup(dir);
+  }
+});
