@@ -1,6 +1,6 @@
 # opurom-web
 
-OPUROM R8 web DOM/Canvas hybrid: a zero-dependency Node project that compiles
+OPUROM web DOM/Canvas hybrid: a zero-dependency Node project that compiles
 IR JSON into a real standalone `index.html` — semantic DOM for structure and
 accessibility, a `<canvas>` for deterministic gradient/effect painting — and
 verifies the rendered page against an independent Node CPU reference. The
@@ -37,20 +37,20 @@ failure, `2` = CLI usage error.
 
 ### emit
 
-Validates IR v0.1 (plus the additive R2/R3 fields this project consumes),
-applies the R3 accessibility contract, resolves `{state}` interpolation and
+Validates IR v0.1 (plus the additive fields this project consumes),
+applies the accessibility contract, resolves `{state}` interpolation and
 `when` guards against initial state, then writes a standalone `index.html`:
 
 - **Semantic DOM** — `<header>` with the app `<h1>`, `<main>` containing the
   IR tree, `<button>` for buttons, `<h2>`/`<p>` for text, `<input>` for
   Slider/Input, `<div>` containers with flex styles from layout props.
 - **ARIA roles from the a11y contract** — every IR node element carries its
-  resolved R3 role (`button`, `text`, `image`, `checkbox`, `slider`,
+  resolved role (`button`, `text`, `image`, `checkbox`, `slider`,
   `heading`, `none`): explicit `props.role` wins (including `none`), else the
-  R3 default table applies (`Text` becomes `heading` at effective size
+  contract's default table applies (`Text` becomes `heading` at effective size
   >= 24, i.e. `size * fontScale`). Bound controls expose `aria-checked` /
-  `value` from initial state; non-text nodes get `aria-label` from the R3
-  label chain; headings get `aria-level`.
+  `value` from initial state; non-text nodes get `aria-label` from the
+  contract's label chain; headings get `aria-level`.
 - **Canvas** — a `<canvas width="480" height="270">` painted by an inline,
   dependency-free integer pixel routine: a two-stop vertical gradient from the
   theme accent to the mode surface, a fixed highlight band, a 2 px border and
@@ -81,7 +81,7 @@ applies the R3 accessibility contract, resolves `{state}` interpolation and
    (header/main/canvas `display`, button display and background, heading font
    size) against IR-derived expectations.
 
-Example (this repository, Microsoft Edge on the macOS R8 host):
+Example (this repository, Microsoft Edge on the macOS host):
 
 ```text
 emit: /tmp/.../index.html (5936 bytes)
@@ -91,7 +91,7 @@ canvas-digest: c02e6eee1be35749
 PASS: verified canvas digest c02e6eee1be35749 equals independent Node CPU reference; 5 roles and 6 computed styles match
 ```
 
-The single-engine `verify` command and its output are unchanged in R8.
+The single-engine `verify` command and its output are unchanged.
 
 ### verify --matrix
 
@@ -146,13 +146,13 @@ Test files (counts are `node --test <file>` totals):
 | File | Tests | Covers |
 | --- | --- | --- |
 | `test/emit.test.mjs` | 9 | structure, escaping, determinism, no-IR markers, CLI emit |
-| `test/aria.test.mjs` | 6 | R3 role table, labels, bound controls, `when` |
+| `test/aria.test.mjs` | 6 | role table, labels, bound controls, `when` |
 | `test/digest.test.mjs` | 6 | FNV vectors, page-vs-CPU byte equality, pinned golden |
 | `test/verify.test.mjs` | 6 | fact parsing, mismatch detection, real browser, SKIP |
 | `test/matrix.test.mjs` | 7 | report shape, real two-engine equality, single mismatch FAIL, SKIP, timeout/cleanup |
 | `test/invalid-ir.test.mjs` | 21 | 16 IR rejection cases, out-dir/traversal, CLI usage |
 
-## Honest scope
+## What is verified here
 
 Verified in this repository, by tests in this repository:
 
@@ -161,7 +161,7 @@ Verified in this repository, by tests in this repository:
   loads the same emitted `index.html` in both, measures each `getImageData`
   digest and DOM roles/computed styles, and compares each digest with the
   independent Node CPU reference. The single-engine `verify` remains Chromium.
-- Semantic DOM emission with the R3 a11y contract's roles, labels and
+- Semantic DOM emission with the accessibility contract's roles, labels and
   initial-state binding, HTML-escaped end to end.
 - Deterministic integer canvas gradient (accent -> surface, band, border,
   rounded corners) with a pinned FNV-1a 64 golden digest and a byte-equality
@@ -172,26 +172,13 @@ Verified in this repository, by tests in this repository:
   helper has a bounded <=30 s timeout, is SIGKILLed as a process group, and
   has its temporary profile removed.
 
-Not implemented / not measured — R9+:
+## Design boundaries
 
-- No Firefox, no mobile browsers, no device matrix, no OS screen-reader
-  integration: the ARIA output is markup-level only and is not validated
-  against a real assistive technology. R9+.
-- No Chromium/WebKit version matrix, no Safari application automation and no
-  second OS host. R9+.
-- No automated visual regression against Flutter/React Native or any
-  competitor, no screenshot diffing, no fps/performance claim. R9+.
-- No animation, no event-to-patch runtime in the emitted page (buttons are
-  semantic and accessible but inert: the page is a compiled snapshot of
-  initial state), no image decoding, no network requests. R9+.
 - `system` theme resolves to `light` without querying the host, matching
   `opurom-render`'s determinism rule.
 - The independent CPU reference shares only the documented recipe (spec
   module) with the page painter; the implementations are separate code, but
   both were written by this project, not by a third-party oracle.
-
-## Gaps / known limits
-
 - `shortcut: canvas covers a fixed 480x270 panel, upgrade to layout-driven
   sizing when the IR carries viewport geometry`.
 - `shortcut: page JS is a compiled snapshot with inert controls, upgrade to

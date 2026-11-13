@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "OPUROM R8 web DOM/Canvas hybrid: IR to semantic HTML emitter plus a real Chromium/WebKit browser digest matrix",
+  "description": "OPUROM web DOM/Canvas hybrid: IR to semantic HTML emitter plus a real Chromium/WebKit browser digest matrix",
   "license": "UNLICENSED",
   "bin": {
     "opurom-web": "./bin/opurom-web.mjs"

@@ -1,4 +1,4 @@
-/* ARIA roles and accessible labels: emitted DOM matches the R3 a11y contract,
+/* ARIA roles and accessible labels: emitted DOM matches the accessibility contract,
  * both through the emitter and through the Node-side expectation used by verify. */
 
 import assert from 'node:assert/strict';
@@ -16,7 +16,7 @@ function emit(irValue) {
   return { dir, html: fs.readFileSync(path.join(dir, 'index.html'), 'utf8') };
 }
 
-test('golden IR roles follow the R3 default table', () => {
+test('golden IR roles follow the contract default table', () => {
   const counter = {
     ir: '0.1',
     app: 'Counter',
@@ -52,7 +52,7 @@ test('Text heading threshold uses effective size (size * fontScale)', () => {
   assert.equal(textFontSize(node(0, 'Text', { value: 'x', size: 16, fontScale: 1.5 })), 24);
 });
 
-test('labelOf follows the R3 label chain', () => {
+test('labelOf follows the contract label chain', () => {
   assert.equal(labelOf(node(0, 'Badge', { label: 'L', value: 'V', title: 'T', name: 'N' })), 'L');
   assert.equal(labelOf(node(0, 'Icon', { name: 'gear' })), 'gear');
   assert.equal(labelOf(node(0, 'Spacer', {})), '');

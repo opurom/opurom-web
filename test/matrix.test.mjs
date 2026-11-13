@@ -1,4 +1,4 @@
-/* R8 browser matrix tests: pure report semantics, a real two-engine CLI run,
+/* Browser matrix tests: pure report semantics, a real two-engine CLI run,
  * single-engine failure, WebKit SKIPs, bounded helper timeout and cleanup.
  * Browser-dependent tests self-skip with a concrete reason. */
 

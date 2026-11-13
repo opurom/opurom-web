@@ -9,7 +9,7 @@ import Darwin
 import Foundation
 import WebKit
 
-private let resultPrefix = "OPR8_RESULT="
+private let resultPrefix = "OPUROM_RESULT="
 
 private func fail(_ message: String) -> Never {
     FileHandle.standardError.write(Data(("error: " + message + "\n").utf8))
