@@ -253,6 +253,20 @@ Verified in this repository, by tests in this repository:
   helper has a bounded <=30 s timeout, is SIGKILLed as a process group, and
   has its temporary profile removed.
 
+## Responsive layout
+
+Every emitted page carries a stylesheet with five viewport tiers that mirror
+`opurom-render`'s logical-pixel breakpoints: compact below 600 px, medium
+below 900 px, expanded below 1200 px, wide below 1600 px and ultra at or
+above 1600 px. Containers are fluid (`width: 100%` with a `max-width` cap),
+and on compact widths a `Row` reflows into a vertical stack, restoring its
+horizontal direction at the medium boundary. The gutter and page padding
+expand across the wider tiers, following the renderer's `fluid_grid` bounds
+(margin 8-32 px, gutter 8-24 px). The deterministic 480x270 canvas effect
+layer is unchanged by these rules. A test asserts the five breakpoints appear
+in the emitted CSS, and a real headless browser asserts a compact viewport
+stacks rows while the 600 px boundary keeps them horizontal.
+
 ## Design decisions
 
 - `system` theme resolves to `light` without querying the host, matching
