@@ -267,6 +267,17 @@ layer is unchanged by these rules. A test asserts the five breakpoints appear
 in the emitted CSS, and a real headless browser asserts a compact viewport
 stacks rows while the 600 px boundary keeps them horizontal.
 
+`Grid` nodes emit a real CSS grid. A `Grid` with an explicit `columns` count
+gets a `grid-cols-N` rule using `repeat(N, minmax(0, 1fr))` and applies the
+per-node `gutter` as its gap; a `Grid` without an explicit count is marked
+`grid-fluid`. The compact tier collapses every grid to a single column, and the
+expanded tier applies `repeat(auto-fill, minmax(120 px, 1fr))` so a wide
+viewport fills the width instead of leaving right-side gaps, mirroring the
+renderer's fluid column bound. A test asserts the emitted `.grid` rule, the
+grid class on the node, the compact collapse and the expanded fluid rule, and a
+real headless browser confirms the single-column collapse and the multi-column
+fill.
+
 ## Design decisions
 
 - `system` theme resolves to `light` without querying the host, matching
