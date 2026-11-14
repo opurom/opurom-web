@@ -103,9 +103,11 @@ applies the accessibility contract, resolves `{state}` interpolation and
 - **Page transitions** — an optional top-level `"transition": "slide" |
   "fade" | "scale"` (also accepted on `theme`) emits the matching
   `opurom-transition-*` keyframes and class, and the runtime plays them on the
-  `#app` root. A `nav` event action (`"op": "nav"`) plays the declared
+  `#app` root. A `nav` event action (`"op": "nav"`) or a compiled `push`
+  action (`"op": "push"`, `"target": "PageName"`) plays the declared
   transition on `tap`/`doubleTap`; `window.opuromNavigate(kind)` replays it
-  explicitly. IR without a transition emits no transition CSS.
+  explicitly. Both are pure navigation signals and never mutate state.
+  IR without a transition emits no transition CSS.
 
 ### verify
 
@@ -222,7 +224,7 @@ Test files (counts are `node --test <file>` totals):
 | --- | --- | --- |
 | `test/emit.test.mjs` | 9 | structure, escaping, determinism, no-IR markers, CLI emit |
 | `test/design-system.test.mjs` | 9 | system font stack, theme-derived tokens, elevation/radius/spacing scales, dark mode, state layers, ripple, byte-identical emission |
-| `test/gestures.test.mjs` | 17 | native tap/double-tap/long-press/drag recognizers, runtime listener install, `nav` wiring, transition keyframes/classes, hook behaviour, determinism, theme-token derivation |
+| `test/gestures.test.mjs` | 19 | native tap/double-tap/long-press/drag recognizers, runtime listener install, `nav`/`push` wiring, transition keyframes/classes, hook behaviour, determinism, theme-token derivation |
 | `test/aria.test.mjs` | 7 | role table, labels, bound controls, `when`, expectedAria contract |
 | `test/digest.test.mjs` | 6 | FNV vectors, page-vs-CPU byte equality, pinned golden |
 | `test/particles.test.mjs` | 11 | particle spec lowering, page-vs-CPU parity, divergent-painter check, DOM layer parity, bounds, browser readback |

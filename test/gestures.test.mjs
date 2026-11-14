@@ -264,6 +264,35 @@ test('a nav action is accepted and wires the tap transition', () => {
   }
 });
 
+test('a push action is accepted and wires the tap transition', () => {
+  const { dir, html } = emitted(ir(
+    node(0, 'Column', {}, [
+      node(1, 'Button', { label: 'Go' }, [], { tap: { op: 'push', target: 'Settings' } }),
+    ]),
+    { transition: 'scale', pages: ['Home', 'Settings'] },
+  ));
+  try {
+    const bindings = /var GESTURES = (\{.*?\});\n/s.exec(html)[1];
+    const binding = JSON.parse(bindings)['1'];
+    assert.equal(binding.nav, true);
+    assert.deepEqual(binding.tap, [], 'the push action is not a state change');
+    assert.match(html, /opuromNavigate/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a push without a page name or with a value is rejected', () => {
+  assert.throws(
+    () => emitFromIr(ir(node(0, 'Button', { label: 'Go' }, [], { tap: { op: 'push', value: 1 } })), tmpDir()),
+    /push takes no value|push requires a page name/,
+  );
+  assert.throws(
+    () => emitFromIr(ir(node(0, 'Button', { label: 'Go' }, [], { tap: { op: 'push', target: 7 } })), tmpDir()),
+    /push target must be a string/,
+  );
+});
+
 test('an invalid nav action is rejected at validation', () => {
   assert.throws(
     () => emitFromIr(ir(node(0, 'Button', { label: 'Go' }, [], { tap: { op: 'nav', value: 1 } })), tmpDir()),
