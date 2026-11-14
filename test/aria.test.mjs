@@ -90,7 +90,7 @@ test('emitted HTML carries contract roles as ARIA attributes in pre-order', () =
     // Heading semantics: explicit level for AT, font size baked in.
     assert.match(html, /<h2 data-node-id="1" role="heading" class="node text" aria-level="2" style="font-size:32px">/);
     // Image gets an accessible name from the label chain.
-    assert.match(html, /<div data-node-id="4" role="image"[^>]*aria-label="logo">/);
+    assert.match(html, /<img data-node-id="4" role="image"[^>]*aria-label="logo">/);
     // Bound controls expose their initial state.
     assert.match(html, /<input data-node-id="5" role="slider" class="node slider" type="range" min="0" max="10" value="4">/);
     assert.match(html, /<button data-node-id="6" role="checkbox" class="node switch" type="button" aria-checked="true">/);
