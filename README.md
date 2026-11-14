@@ -87,6 +87,22 @@ applies the accessibility contract, resolves `{state}` interpolation and
   IR's initial value writes `<name>: <value>` as text exactly once; repeated
   identical values write nothing. Embedded IR values escape `<`, and
   announcements use `textContent`, never markup.
+- **Native gestures** — every interactive node (a `Button`, or any node that
+  declares an event) receives real DOM `pointerdown`/`pointermove`/
+  `pointerup`/`pointercancel` listeners at runtime, modelled on Flutter's
+  `GestureDetector` recognizers. A press fires `tap` (after a short
+  double-tap window), two presses within that window fire `doubleTap`, a hold
+  past 500 ms fires `longPress`, and a move beyond a 10 px threshold fires
+  `drag`/`dragEnd`. Each recognized gesture dispatches the node's event actions
+  against the live state through the same executor as an input edit. Listeners
+  are installed by the inline runtime only, so the emitted markup stays
+  byte-identical for identical IR.
+- **Page transitions** — an optional top-level `"transition": "slide" |
+  "fade" | "scale"` (also accepted on `theme`) emits the matching
+  `opurom-transition-*` keyframes and class, and the runtime plays them on the
+  `#app` root. A `nav` event action (`"op": "nav"`) plays the declared
+  transition on `tap`/`doubleTap`; `window.opuromNavigate(kind)` replays it
+  explicitly. IR without a transition emits no transition CSS.
 
 ### verify
 
@@ -182,13 +198,13 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 153 tests
+node --test          # 170 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On a macOS host with both engines: 153 pass, 0 skipped; the real two-engine
+- On a macOS host with both engines: 170 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
-- On this host (headless browser startup refused), 150 pass, 0 failed, 3
+- On this host (headless browser startup refused), 167 pass, 0 failed, 3
   browser tests skip with a concrete reason.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -203,6 +219,7 @@ Test files (counts are `node --test <file>` totals):
 | --- | --- | --- |
 | `test/emit.test.mjs` | 9 | structure, escaping, determinism, no-IR markers, CLI emit |
 | `test/design-system.test.mjs` | 9 | system font stack, theme-derived tokens, elevation/radius/spacing scales, dark mode, state layers, ripple, byte-identical emission |
+| `test/gestures.test.mjs` | 17 | native tap/double-tap/long-press/drag recognizers, runtime listener install, `nav` wiring, transition keyframes/classes, hook behaviour, determinism, theme-token derivation |
 | `test/aria.test.mjs` | 7 | role table, labels, bound controls, `when`, expectedAria contract |
 | `test/digest.test.mjs` | 6 | FNV vectors, page-vs-CPU byte equality, pinned golden |
 | `test/particles.test.mjs` | 11 | particle spec lowering, page-vs-CPU parity, divergent-painter check, DOM layer parity, bounds, browser readback |

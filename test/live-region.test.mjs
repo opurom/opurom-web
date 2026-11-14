@@ -45,7 +45,12 @@ function runPage(html) {
     querySelector: () => null,
     querySelectorAll: () => [],
   };
-  const window = { getComputedStyle: () => ({ getPropertyValue: () => '' }) };
+  const window = {
+    getComputedStyle: () => ({ getPropertyValue: () => '' }),
+    setTimeout: () => 0,
+    clearTimeout: () => {},
+  };
+  window.window = window;
   new Function('document', 'window', script)(document, window);
   return { announce: window.opuromAnnounceState, writes, markupWrites };
 }
