@@ -173,3 +173,69 @@ test('breakpoints, fluid grid, Icon svg and the canvas layer stay intact', () =>
     cleanup(dir);
   }
 });
+
+/* ---- highContrast: mirrors opurom-render's contrast_text fill/border swap ---- */
+
+test('highContrast adds a 2px contrast border on a filled node', () => {
+  const dark = emitted(ir(node(0, 'Container', { bg: '#112233', highContrast: true }, [])));
+  try {
+    // A dark fill gets a white outline.
+    assert.match(dark.html, /background-color:#112233; border:2px solid #ffffff/);
+  } finally {
+    cleanup(dark.dir);
+  }
+  const light = emitted(ir(node(0, 'Container', { bg: '#EEEEEE', highContrast: true }, [])));
+  try {
+    // A light fill gets a black outline.
+    assert.match(light.html, /background-color:#EEEEEE; border:2px solid #000000/);
+  } finally {
+    cleanup(light.dir);
+  }
+});
+
+test('highContrast swaps a text node foreground to the contrast color', () => {
+  const { dir, html } = emitted(ir(node(0, 'Column', {}, [
+    node(1, 'Text', { value: 'hi', highContrast: true }, []),
+  ])));
+  try {
+    // The fixture surface is light -> the contrast text color is black.
+    assert.match(html, /<p data-node-id="1"[^>]*style="color:#000000; font-size:16px"/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a container with gradient and highContrast outlines the gradient top stop', () => {
+  const { dir, html } = emitted(ir(node(0, 'Container', {
+    gradient: '#112233,#334455', highContrast: true,
+  }, [])));
+  try {
+    assert.match(html, /border:2px solid #ffffff/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a node without highContrast gets no border or colour swap', () => {
+  const plain = emitted(ir(node(0, 'Column', {}, [
+    node(1, 'Container', { bg: '#112233' }, []),
+    node(2, 'Text', { value: 'plain' }, []),
+  ])));
+  try {
+    assert.doesNotMatch(plain.html, /border:2px solid/);
+    assert.doesNotMatch(plain.html, /color:#000000/);
+    assert.doesNotMatch(plain.html, /color:#ffffff/);
+  } finally {
+    cleanup(plain.dir);
+  }
+});
+
+test('highContrast outlines a container whose fill arrives as color', () => {
+  // A Container's `bg` lowers to a fill `color`; the outline must still apply.
+  const { dir, html } = emitted(ir(node(0, 'Container', { color: '#112233', highContrast: true }, [])));
+  try {
+    assert.match(html, /background-color:#112233; border:2px solid #ffffff/);
+  } finally {
+    cleanup(dir);
+  }
+});

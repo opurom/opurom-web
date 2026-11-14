@@ -310,6 +310,11 @@ geometry, `Player` renders its track, filled portion and thumb, and `Menu`,
 `Tabs`, `Spinner`, `Tooltip` and `Divider` render their native-equivalent
 content.
 
+`highContrast` mirrors the renderer's contrast rule: a filled node gets a 2px
+outline in the pure white or black contrast colour of its own fill (by integer
+luminance), and a text node's foreground flips to the contrast colour of its
+background or the page surface.
+
 ## Design decisions
 
 - `system` theme resolves to `light` without querying the host, matching
