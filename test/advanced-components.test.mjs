@@ -244,7 +244,7 @@ test('advanced nodes keep data-node-id, role, class and effect CSS', () => {
     assert.match(html, /<div data-node-id="1" role="none" class="node table anim-entry anim-spring"/);
     assert.match(html, /background-color:#ffffff/);
     assert.match(html, /border:1px solid #E4E9F2/);
-    assert.match(html, /box-shadow:0 2px 2px rgba\(0, 0, 0, 0\.15\)/);
+    assert.match(html, /box-shadow:0 2px 6px rgba\(17, 24, 39, 0\.08\), 0 4px 12px rgba\(17, 24, 39, 0\.06\)/);
   } finally {
     cleanup(dir);
   }

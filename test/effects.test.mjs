@@ -41,7 +41,7 @@ test('gradient, shadow and border lower to the matching CSS', () => {
   const { dir, html } = emitted(effectIr({ glass: false }));
   try {
     assert.match(html, /background:linear-gradient\(to bottom, #097FEB, #043B70\)/);
-    assert.match(html, /box-shadow:0 3px 3px rgba\(0, 0, 0, 0\.15\)/);
+    assert.match(html, /box-shadow:0 3px 9px rgba\(17, 24, 39, 0\.08\), 0 6px 18px rgba\(17, 24, 39, 0\.06\)/);
     assert.match(html, /border:1px solid #E4E9F2/);
   } finally {
     cleanup(dir);
@@ -116,10 +116,13 @@ test('bad gradient and border literals are ignored; a shadow clamps to the rende
     gradient: 'not-a-gradient', border: 'blue', glass: false, shadow: 9,
   }));
   try {
-    assert.doesNotMatch(html, /linear-gradient/);
-    assert.doesNotMatch(html, /border:1px solid blue/);
-    // The renderer clamps shadow to 0..8, so 9 lowers to the 8 px spread.
-    assert.match(html, /box-shadow:0 8px 8px rgba\(0, 0, 0, 0\.15\)/);
+    // The container node's inline style must drop the bad gradient and border
+    // literals; the stylesheet's .image tile gradient is unrelated to this node.
+    const nodeStyle = (html.match(/<div data-node-id="0"[^>]*style="([^"]*)"/) ?? ['', ''])[1];
+    assert.doesNotMatch(nodeStyle, /linear-gradient/);
+    assert.doesNotMatch(nodeStyle, /blue/);
+    // The emitter caps the shadow tier at 3, so shadow 9 lowers to the layered 3 tier.
+    assert.match(nodeStyle, /box-shadow:0 3px 9px rgba\(17, 24, 39, 0\.08\), 0 6px 18px rgba\(17, 24, 39, 0\.06\)/);
   } finally {
     cleanup(dir);
   }
@@ -199,7 +202,7 @@ test('highContrast swaps a text node foreground to the contrast color', () => {
   ])));
   try {
     // The fixture surface is light -> the contrast text color is black.
-    assert.match(html, /<p data-node-id="1"[^>]*style="color:#000000; font-size:16px"/);
+    assert.match(html, /<p data-node-id="1"[^>]*style="margin:0; overflow-wrap:anywhere; color:#000000; font-size:16px"/);
   } finally {
     cleanup(dir);
   }
