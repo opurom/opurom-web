@@ -43,6 +43,26 @@ test('emit produces semantic header/main/button/canvas structure', () => {
   }
 });
 
+test('emit inlines the transparent framework favicon as a data URI', () => {
+  const { dir, html } = emitted();
+  try {
+    assert.match(
+      html,
+      /<link rel="icon" type="image\/png" href="data:image\/png;base64,[A-Za-z0-9+/]+=*">/,
+    );
+    // The icon is transparent: the base64 payload decodes to a 32x32 RGBA PNG
+    // whose corner alpha is zero.
+    const match = /href="data:image\/png;base64,([A-Za-z0-9+/]+=*)">/.exec(html);
+    assert.ok(match, 'favicon data URI present');
+    const png = Buffer.from(match[1], 'base64');
+    assert.equal(png.readUInt32BE(16), 32, 'favicon width is 32');
+    assert.equal(png.readUInt32BE(20), 32, 'favicon height is 32');
+    assert.equal(png[25], 6, 'favicon colour type is RGBA');
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('emit bakes the theme accent and gradient canvas size into the page', () => {
   const { dir, html } = emitted();
   try {

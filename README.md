@@ -16,6 +16,9 @@ same page in Chromium and real WebKit on one macOS host.
   HTML, inline CSS/JS) and never parses IR JSON.
 - One file in, one file out: `emit` writes exactly `index.html` into the
   out-dir.
+ - The page inlines a transparent 32x32 framework favicon as a data URI, so
+   the browser tab shows the framework logo while the out-dir still holds
+   exactly one file.
 
 ## Usage
 
