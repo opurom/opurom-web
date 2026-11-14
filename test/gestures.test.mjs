@@ -282,6 +282,33 @@ test('a push action is accepted and wires the tap transition', () => {
   }
 });
 
+test('a validate action lowers to the reserved @validate signal', () => {
+  const { dir, html } = emitted(ir(
+    node(0, 'Column', {}, [
+      node(1, 'Button', { label: 'Check' }, [], { tap: { op: 'validate', target: 'form' } })
+    ])
+  ));
+  try {
+    const bindings = /var GESTURES = (\{.*?\});\n/s.exec(html)[1];
+    assert.deepEqual(JSON.parse(bindings)['1'].tap, [
+      { op: 'set', target: '@validate', value: 'form' }
+    ]);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a validate action with a value or a non-string target is rejected', () => {
+  assert.throws(
+    () => emitFromIr(ir(node(0, 'Button', { label: 'Check' }, [], { tap: { op: 'validate', target: 'form', value: 1 } })), tmpDir()),
+    /validate takes no value/
+  );
+  assert.throws(
+    () => emitFromIr(ir(node(0, 'Button', { label: 'Check' }, [], { tap: { op: 'validate', target: 7 } })), tmpDir()),
+    /validate target must be a string/
+  );
+});
+
 test('a push without a page name or with a value is rejected', () => {
   assert.throws(
     () => emitFromIr(ir(node(0, 'Button', { label: 'Go' }, [], { tap: { op: 'push', value: 1 } })), tmpDir()),
