@@ -70,6 +70,16 @@ applies the accessibility contract, resolves `{state}` interpolation and
   gradient spec and in the page's `--surface` / `--ink` custom properties.
   Each field falls back to the mode palette when absent, so IR without tokens
   keeps the same canvas digest.
+- **Material 3 design tokens** — the emitted stylesheet carries a `:root` token
+  layer derived from the IR theme: `--opurom-surface`, `--opurom-on-surface`
+  and `--opurom-primary`, elevation shadows at `--opurom-elevation-1/2/3`, an
+  8px radius scale and a 4px spacing grid. Interactive nodes get state-layer
+  hover/pressed/disabled/focus overlays, `:focus-visible` rings, CSS
+  transitions and a clipped `opurom-ripple` press effect. Dark themes resolve
+  the same tokens from the dark palette. The system font stack is
+  `-apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+  "Segoe UI", Roboto, sans-serif` with no bitmap or monospace fallback, and
+  emission remains deterministic: identical IR produces byte-identical HTML.
 - **Escaping** — all IR-derived text and attributes are HTML-escaped, so
   hostile IR content cannot inject markup or traverse out of the out-dir.
 - **State announcements** — a visually hidden `aria-live="polite"` region
@@ -172,12 +182,14 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 87 tests
+node --test          # 153 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 87 pass, 0 skipped; the real two-engine
+- On a macOS host with both engines: 153 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
+- On this host (headless browser startup refused), 150 pass, 0 failed, 3
+  browser tests skip with a concrete reason.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
 - `test/verify.test.mjs` also exercises the single-engine SKIP path
@@ -190,6 +202,7 @@ Test files (counts are `node --test <file>` totals):
 | File | Tests | Covers |
 | --- | --- | --- |
 | `test/emit.test.mjs` | 9 | structure, escaping, determinism, no-IR markers, CLI emit |
+| `test/design-system.test.mjs` | 9 | system font stack, theme-derived tokens, elevation/radius/spacing scales, dark mode, state layers, ripple, byte-identical emission |
 | `test/aria.test.mjs` | 7 | role table, labels, bound controls, `when`, expectedAria contract |
 | `test/digest.test.mjs` | 6 | FNV vectors, page-vs-CPU byte equality, pinned golden |
 | `test/particles.test.mjs` | 11 | particle spec lowering, page-vs-CPU parity, divergent-painter check, DOM layer parity, bounds, browser readback |
