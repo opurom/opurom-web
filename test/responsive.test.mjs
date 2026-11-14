@@ -42,13 +42,14 @@ test('emitted CSS declares all five renderer breakpoints', () => {
   }
 });
 
-test('the compact media query stacks rows vertically', () => {
+test('rows wrap at every tier instead of force-stacking on phones', () => {
   const { dir, css } = emittedCss();
   try {
-    assert.match(compactRule(css), /\.row \{[^}]*flex-direction: column/);
-    // The wider tiers restore the horizontal direction.
-    const wide = css.match(/@media \(min-width: 600px\) \{([\s\S]*?)\}/)[0];
-    assert.match(wide, /\.row \{[^}]*flex-direction: row/);
+    // Children keep their natural size and drop to the next line only when the
+    // row runs out of width, so avatar lines, photo strips and action rows
+    // survive a narrow column without scattering into centered stacks.
+    assert.match(css, /\.row \{[^}]*flex-wrap: wrap/);
+    assert.doesNotMatch(css, /\.row \{[^}]*flex-direction: column/);
   } finally {
     cleanup(dir);
   }
