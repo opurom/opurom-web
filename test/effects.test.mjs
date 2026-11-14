@@ -80,8 +80,10 @@ test('a gradient wins over a flat bg for the background', () => {
 test('glass lowers a blur and a translucent fill that follows the theme', () => {
   const light = emitted(effectIr({ gradient: undefined, shadow: undefined, border: undefined }));
   try {
-    assert.match(light.html, /backdrop-filter:blur\(6px\)/);
-    assert.match(light.html, /background:rgba\(255, 255, 255, 0\.7\)/);
+    assert.match(light.html, /backdrop-filter:blur\(2px\) saturate\(1\.5\) contrast\(1\.12\) brightness\(1\.04\)/);
+    assert.match(light.html, /background:rgba\(255, 255, 255, 0\.42\)/);
+    // Liquid glass depth: soft drop plus specular top edge and darker interior.
+    assert.match(light.html, /inset 0 1px 0 rgba\(255, 255, 255, 0\.6\)/);
   } finally {
     cleanup(light.dir);
   }
@@ -90,7 +92,8 @@ test('glass lowers a blur and a translucent fill that follows the theme', () => 
     { mode: 'dark', accent: '#097FEB', radius: 12 },
   ));
   try {
-    assert.match(dark.html, /background:rgba\(17, 24, 39, 0\.7\)/);
+    assert.match(dark.html, /background:rgba\(30, 35, 46, 0\.38\)/);
+    assert.match(dark.html, /inset 0 1px 0 rgba\(255, 255, 255, 0\.22\)/);
   } finally {
     cleanup(dark.dir);
   }
