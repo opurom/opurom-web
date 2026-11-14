@@ -13,6 +13,7 @@
  * English-only messages; no dependencies beyond Node builtins. */
 
 import process from 'node:process';
+import path from 'node:path';
 
 import { emitFromIr } from '../lib/emit.mjs';
 import { loadIr } from '../lib/ir.mjs';
@@ -49,7 +50,7 @@ async function main() {
 
   if (command === 'emit') {
     const ir = loadIr(irPath);
-    const result = emitFromIr(ir, outDir);
+    const result = emitFromIr(ir, outDir, { assetBase: path.dirname(path.resolve(irPath)) });
     process.stdout.write(`emit: ${result.indexPath} (${result.bytes} bytes)\n`);
     return 0;
   }

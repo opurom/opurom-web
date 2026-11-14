@@ -14,11 +14,12 @@ same page in Chromium and real WebKit on one macOS host.
 - No runtime IR interpreter: all IR interpretation happens at emit time in
   Node. The page contains compiled constants (gradient spec, static semantic
   HTML, inline CSS/JS) and never parses IR JSON.
-- One file in, one file out: `emit` writes exactly `index.html` into the
-  out-dir.
+- One file in, one file out for resource-free IR: `emit` writes `index.html`
+  into the out-dir. IR that references static images also bundles those files
+  under the referenced relative paths, so the emitted page resolves every
+  `<img src>` without a manual copy step.
  - The page inlines a transparent 32x32 framework favicon as a data URI, so
-   the browser tab shows the framework logo while the out-dir still holds
-   exactly one file.
+   the browser tab shows the framework logo without an extra file.
 
 ## Usage
 
@@ -42,7 +43,12 @@ failure, `2` = CLI usage error.
 
 Validates IR v0.1 (plus the additive fields this project consumes),
 applies the accessibility contract, resolves `{state}` interpolation and
-`when` guards against initial state, then writes a standalone `index.html`:
+`when` guards against initial state, then writes a standalone `index.html`.
+Static image references from node `src` props and string or list state are
+resolved against the IR directory and its ancestors, then copied into the
+out-dir under the same relative path. Absolute paths, `..` segments and data
+URIs are never followed, so an authored IR cannot reach outside its project.
+The emitted page contains:
 
 - **Semantic DOM** — `<header>` with the app `<h1>`, `<main>` containing the
   IR tree, `<button>` for buttons, `<h2>`/`<p>` for text, `<input>` for
