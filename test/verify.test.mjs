@@ -13,7 +13,7 @@ import { findBrowser } from '../lib/browser.mjs';
 import { referenceDigest } from '../lib/cpu-reference.mjs';
 import { gradientSpec } from '../lib/contract.mjs';
 import { expectedStyles, compareFacts, parseFacts, verify } from '../lib/verify.mjs';
-import { COUNTER_FIXTURE, runCli, tmpDir, cleanup } from '../test-helpers/helpers.mjs';
+import { COUNTER_FIXTURE, ir, multipageIr, node, runCli, tmpDir, cleanup, writeJson } from '../test-helpers/helpers.mjs';
 
 const counterIr = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
 
@@ -148,3 +148,50 @@ test('verify SKIPs with exit 0 when the configured browser is unavailable', () =
     cleanup(dir);
   }
 });
+
+/* For IRs: the expectation side understands the expanded list shape, so a real
+ * browser run must pass, not mismatch on the template region. */
+function singleForIr() {
+  return ir(
+    node(0, 'Column', { gap: 8 }, [
+      node(1, 'For', { source: 'items', item: 'p' }, [node(2, 'Text', { value: 'Row {p}' })]),
+      node(3, 'Button', { label: 'Add' }),
+    ]),
+    { state: [{ name: 'items', type: 'list', init: ['a', 'b'] }] },
+  );
+}
+
+function multiForIr() {
+  const home = node(0, 'Column', {}, [
+    node(1, 'For', { source: 'items', item: 'p' }, [node(2, 'Text', { value: 'Row {p}' })]),
+    node(3, 'Button', { label: 'Add' }, [], { tap: { op: 'append', target: 'items', value: 'x' } }),
+  ]);
+  return multipageIr({ Home: { title: 'Home', tree: home } }, 'Home', {
+    state: [{ name: 'items', type: 'list', init: ['a', 'b'] }],
+  });
+}
+
+function verifyForIr(name, buildIr, expectedRoles) {
+  test(name, (t) => {
+    const found = findBrowser();
+    if (found.path === null) {
+      t.skip(`headless browser unavailable: ${found.reason}`);
+      return;
+    }
+    const dir = tmpDir();
+    try {
+      const irFile = path.join(dir, 'for.opuir.json');
+      writeJson(irFile, buildIr());
+      const run = runCli(['verify', irFile, path.join(dir, 'out')], { timeout: 120_000 });
+      assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
+      if (/SKIP: headless browser could not render the page here/.test(run.stdout)) return;
+      assert.match(run.stdout, /^PASS: verified canvas digest/m);
+      assert.match(run.stdout, new RegExp(`${expectedRoles} roles and`));
+    } finally {
+      cleanup(dir);
+    }
+  });
+}
+
+verifyForIr('verify passes on a single-page For IR with static rows', singleForIr, 5);
+verifyForIr('verify passes on a multi-page For IR with a template region', multiForIr, 3);

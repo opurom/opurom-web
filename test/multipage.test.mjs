@@ -215,7 +215,7 @@ function forIr() {
 test('multi-page emit lowers For to a data-for template', () => {
   const { dir, html } = emit(forIr());
   try {
-    assert.match(html, /<template data-for="items" data-item="p" data-for-region="1">/);
+    assert.match(html, /<template data-node-id="1" role="none" class="node for" data-for="items" data-item="p" data-for-region="1">/);
     assert.match(html, /data-label="Row \{p\}"/);
     assert.match(html, /&quot;op&quot;:&quot;append&quot;/);
     assert.match(html, /&quot;op&quot;:&quot;removeAt&quot;/);
