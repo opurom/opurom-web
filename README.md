@@ -154,6 +154,7 @@ Test files (counts are `node --test <file>` totals):
 | `test/icon.test.mjs` | 2 | inline SVG icon emission |
 | `test/inspector.test.mjs` | 8 | fixture-driven three-channel views, availability badges, pure-browser bundle scan, CLI assembly |
 | `test/i18n.test.mjs` | 8 | DOM dir/CSS, RTL mirror rules, catalog fallback paths, @locale patch, zero-change goldens |
+| `test/boundary.test.mjs` | 4 | opt-in containment mapping, tolerant validation, byte-identical goldens |
 
 ## What is verified here
 
