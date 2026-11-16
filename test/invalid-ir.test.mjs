@@ -50,6 +50,43 @@ emitExpectingFailure('a set action with a type mismatch', {
   ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'set', target: 's', value: 3 } })),
   state: [{ name: 's', type: 'string', init: 'v' }],
 }, /value 3 does not match target type string/);
+emitExpectingFailure('a For loop over a non-list state', {
+  ...ir(node(0, 'For', { source: 'n', item: 'p' }, [node(1, 'Text', { value: 'x' })])),
+  state: [{ name: 'n', type: 'int', init: 1 }],
+}, /For source "n" must be list, got int/);
+emitExpectingFailure('a For loop over an unknown state', {
+  ...ir(node(0, 'For', { source: 'ghost', item: 'p' }, [node(1, 'Text', { value: 'x' })])),
+}, /For source references unknown state "ghost"/);
+emitExpectingFailure('a For loop with a bad item name', {
+  ...ir(node(0, 'For', { source: 'items', item: '9p' }, [node(1, 'Text', { value: 'x' })])),
+  state: [{ name: 'items', type: 'list', init: [] }],
+}, /For props\.item "9p" is not an identifier/);
+emitExpectingFailure('append with a non-string value', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'append', target: 'items', value: 1 } })),
+  state: [{ name: 'items', type: 'list', init: [] }],
+}, /append requires a string value/);
+emitExpectingFailure('append to a non-list state', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'append', target: 's', value: 'v' } })),
+  state: [{ name: 's', type: 'string', init: '' }],
+}, /append target "s" must be list/);
+emitExpectingFailure('removeAt with valueFrom', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'removeAt', target: 'items', valueFrom: 's' } })),
+  state: [
+    { name: 'items', type: 'list', init: [] },
+    { name: 's', type: 'int', init: 0 },
+  ],
+}, /removeAt takes no valueFrom/);
+emitExpectingFailure('a negative removeAt index', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'removeAt', target: 'items', value: -1 } })),
+  state: [{ name: 'items', type: 'list', init: [] }],
+}, /non-negative integer/);
+emitExpectingFailure('a set action targeting a list state', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'set', target: 'items', valueFrom: 's' } })),
+  state: [
+    { name: 'items', type: 'list', init: [] },
+    { name: 's', type: 'list', init: [] },
+  ],
+}, /set cannot target list state "items" \(use assign\)/);
 
 test('emit rejects malformed JSON', () => {
   const dir = tmpDir();
