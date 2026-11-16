@@ -10,6 +10,7 @@ import test from 'node:test';
 import { expectedDom } from '../lib/a11y.mjs';
 import { emitFromIr } from '../lib/emit.mjs';
 import { validateIr } from '../lib/ir.mjs';
+import { multiPageRouter } from '../lib/page-source.mjs';
 import { cleanup, multipageIr, node, tmpDir } from '../test-helpers/helpers.mjs';
 
 function twoRouteIr() {
@@ -90,4 +91,90 @@ test('multi-page rejects non-contiguous node id space', () => {
   ir.routes.Detail.tree.children[0].id = 11;
   ir.routes.Detail.tree.children[1].id = 12;
   assert.throws(() => validateIr(ir), /not contiguous/);
+});
+
+function restoreIr() {
+  const secret = node(2, 'Text', { value: 'Secret' });
+  secret.when = 'show';
+  const home = node(0, 'Column', { gap: 8 }, [
+    node(1, 'Text', { value: 'Hi {name}' }),
+    secret,
+    node(3, 'Button', { label: 'Open' }, [], { tap: { op: 'push', target: 'Detail' } }),
+  ]);
+  const detail = node(4, 'Column', { gap: 8 }, [
+    node(5, 'Button', { label: 'Back' }, [], { tap: { op: 'pop' } }),
+  ]);
+  return multipageIr(
+    { Home: { title: 'Home', tree: home }, Detail: { title: 'Detail', tree: detail } },
+    'Home',
+    {
+      state: [
+        { name: 'show', type: 'bool', init: false },
+        { name: 'name', type: 'string', init: 'World' },
+      ],
+    },
+  );
+}
+
+test('multi-page emit keeps raw state templates and the restore hook', () => {
+  const { dir, html } = emit(restoreIr());
+  try {
+    // Baked text still holds the compile-time value; the raw template rides
+    // along so the router can re-render after a state restore.
+    assert.match(html, />Hi World</);
+    assert.match(html, /data-label="Hi \{name\}"/);
+    assert.match(html, /__Opurom_STATE_RESTORE__/);
+    // The dev client rewrites the state declaration in place; keep the line.
+    assert.match(html, /var state = \{"show":false,"name":"World"\};/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function bootRouter(restore) {
+  const element = (attrs, extra = {}) => ({
+    attrs,
+    hidden: false,
+    textContent: '',
+    getAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(this.attrs, name) ? this.attrs[name] : null;
+    },
+    setAttribute(name, value) {
+      this.attrs[name] = String(value);
+    },
+    ...extra,
+  });
+  const sections = [element({ 'data-route': 'Home' }), element({ 'data-route': 'Detail' })];
+  sections[1].hidden = true; // emitter ships non-initial routes hidden
+  const greeting = element(
+    { 'data-node-id': '1', 'data-label': 'Hi {name}' },
+    { textContent: 'Hi World' }, // compile-time bake
+  );
+  const secret = element({ 'data-node-id': '2', 'data-when': 'show' }, { hidden: true });
+  const document = {
+    addEventListener() {},
+    querySelectorAll(selector) {
+      if (selector.indexOf('section[data-route]') !== -1) return sections;
+      if (selector === '[data-when]') return [secret];
+      if (selector === '[data-node-id]') return [greeting, secret];
+      return [];
+    },
+  };
+  const window = restore === undefined ? {} : { __Opurom_STATE_RESTORE__: restore };
+  new Function('window', 'document', multiPageRouter(restoreIr()))(window, document);
+  return { sections, greeting, secret };
+}
+
+test('router applies __Opurom_STATE_RESTORE__ at boot', () => {
+  const { sections, greeting, secret } = bootRouter({ show: true, name: 'Dev' });
+  assert.equal(secret.hidden, false, 'restored guard must reveal the node');
+  assert.equal(greeting.textContent, 'Hi Dev', 'restored state must re-render text');
+  assert.equal(sections[0].hidden, false, 'initial route stays visible');
+  assert.equal(sections[1].hidden, true, 'other routes stay hidden');
+});
+
+test('router boot stays at initial render without a restore snapshot', () => {
+  const { greeting, secret } = bootRouter();
+  assert.equal(secret.hidden, true, 'guard keeps its compile-time hidden state');
+  assert.equal(greeting.textContent, 'Hi World', 'text keeps the baked initial value');
 });
