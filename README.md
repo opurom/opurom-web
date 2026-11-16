@@ -145,12 +145,14 @@ Test files (counts are `node --test <file>` totals):
 
 | File | Tests | Covers |
 | --- | --- | --- |
-| `test/emit.test.mjs` | 9 | structure, escaping, determinism, no-IR markers, CLI emit |
+| `test/emit.test.mjs` | 10 | structure, escaping, determinism, no-IR markers, static For expansion, CLI emit |
 | `test/aria.test.mjs` | 6 | role table, labels, bound controls, `when` |
 | `test/digest.test.mjs` | 6 | FNV vectors, page-vs-CPU byte equality, pinned golden |
-| `test/verify.test.mjs` | 6 | fact parsing, mismatch detection, real browser, SKIP |
+| `test/verify.test.mjs` | 8 | fact parsing, mismatch detection, real browser, For IR verify, SKIP |
 | `test/matrix.test.mjs` | 7 | report shape, real two-engine equality, single mismatch FAIL, SKIP, timeout/cleanup |
-| `test/invalid-ir.test.mjs` | 21 | 16 IR rejection cases, out-dir/traversal, CLI usage |
+| `test/invalid-ir.test.mjs` | 41 | 34 IR rejection cases, out-dir/traversal, CLI usage |
+| `test/icon.test.mjs` | 2 | inline SVG icon emission |
+| `test/inspector.test.mjs` | 8 | fixture-driven three-channel views, availability badges, pure-browser bundle scan, CLI assembly |
 
 ## What is verified here
 
