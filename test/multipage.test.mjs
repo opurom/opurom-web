@@ -131,26 +131,40 @@ test('multi-page emit keeps raw state templates and the restore hook', () => {
   }
 });
 
-function bootRouter(restore) {
-  const element = (attrs, extra = {}) => ({
+function stubElement(attrs, extra = {}) {
+  const element = {
     attrs,
     hidden: false,
     textContent: '',
+    parentNode: null,
     getAttribute(name) {
       return Object.prototype.hasOwnProperty.call(this.attrs, name) ? this.attrs[name] : null;
     },
     setAttribute(name, value) {
       this.attrs[name] = String(value);
     },
+    closest(selector) {
+      const key = selector.slice(1, -1); // [attribute]
+      let node = element;
+      while (node !== null) {
+        if (Object.prototype.hasOwnProperty.call(node.attrs, key)) return node;
+        node = node.parentNode;
+      }
+      return null;
+    },
     ...extra,
-  });
-  const sections = [element({ 'data-route': 'Home' }), element({ 'data-route': 'Detail' })];
+  };
+  return element;
+}
+
+function bootRouter(restore) {
+  const sections = [stubElement({ 'data-route': 'Home' }), stubElement({ 'data-route': 'Detail' })];
   sections[1].hidden = true; // emitter ships non-initial routes hidden
-  const greeting = element(
+  const greeting = stubElement(
     { 'data-node-id': '1', 'data-label': 'Hi {name}' },
     { textContent: 'Hi World' }, // compile-time bake
   );
-  const secret = element({ 'data-node-id': '2', 'data-when': 'show' }, { hidden: true });
+  const secret = stubElement({ 'data-node-id': '2', 'data-when': 'show' }, { hidden: true });
   const document = {
     addEventListener() {},
     querySelectorAll(selector) {
@@ -177,4 +191,117 @@ test('router boot stays at initial render without a restore snapshot', () => {
   const { greeting, secret } = bootRouter();
   assert.equal(secret.hidden, true, 'guard keeps its compile-time hidden state');
   assert.equal(greeting.textContent, 'Hi World', 'text keeps the baked initial value');
+});
+
+function forIr() {
+  const loop = node(1, 'For', { source: 'items', item: 'p' }, [node(2, 'Text', { value: 'Row {p}' })]);
+  const home = node(0, 'Column', { gap: 8 }, [
+    loop,
+    node(3, 'Column', { gap: 4 }, [
+      node(4, 'Button', { label: 'Add' }, [], { tap: { op: 'append', target: 'items', value: 'x' } }),
+      node(5, 'Button', { label: 'Trim' }, [], { tap: { op: 'removeAt', target: 'items', value: 0 } }),
+    ]),
+  ]);
+  return multipageIr({ Home: { title: 'Home', tree: home } }, 'Home', {
+    state: [{ name: 'items', type: 'list', init: ['a', 'b'] }],
+  });
+}
+
+test('multi-page emit lowers For to a data-for template', () => {
+  const { dir, html } = emit(forIr());
+  try {
+    assert.match(html, /<template data-for="items" data-item="p" data-for-region="1">/);
+    assert.match(html, /data-label="Row \{p\}"/);
+    assert.match(html, /&quot;op&quot;:&quot;append&quot;/);
+    assert.match(html, /&quot;op&quot;:&quot;removeAt&quot;/);
+    // The dev client rewrites this declaration in place; keep it intact.
+    assert.match(html, /var state = \{"items":\["a","b"\]\};/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function forEnv(restore) {
+  const listeners = {};
+  const column = {
+    children: [],
+    insertBefore(element, anchor) {
+      const at = anchor === null ? column.children.length : column.children.indexOf(anchor);
+      column.children.splice(at, 0, element);
+      element.parentNode = column;
+    },
+    removeChild(element) {
+      const at = column.children.indexOf(element);
+      if (at !== -1) column.children.splice(at, 1);
+      element.parentNode = null;
+    },
+  };
+  const freshRow = () => {
+    const text = stubElement({ 'data-node-id': '2', 'data-label': 'Row {p}' }, { textContent: 'Row {p}' });
+    const root = stubElement({});
+    text.parentNode = root;
+    root.childNodes = [text];
+    return root;
+  };
+  const template = stubElement(
+    { 'data-for': 'items', 'data-item': 'p', 'data-for-region': '1' },
+    { content: { cloneNode: () => ({ childNodes: [freshRow()] }) } },
+  );
+  Object.defineProperty(template, 'nextSibling', {
+    get: () => {
+      const at = column.children.indexOf(template);
+      return at === -1 ? null : column.children[at + 1] ?? null;
+    },
+  });
+  column.children.push(template);
+  template.parentNode = column;
+  const rows = () => column.children.filter((child) => child.attrs['data-for-row'] === '1');
+  const rowTexts = () => rows().flatMap((row) => row.childNodes);
+  const document = {
+    addEventListener(type, handler) {
+      listeners[type] = handler;
+    },
+    querySelectorAll(selector) {
+      if (selector === 'template[data-for]') return [template];
+      if (selector === '[data-for-row="1"]') return rows();
+      if (selector === '[data-node-id]') return rowTexts();
+      if (selector.indexOf('section[data-route]') !== -1) return [];
+      return [];
+    },
+  };
+  const window = restore === undefined ? {} : { __Opurom_STATE_RESTORE__: restore };
+  new Function('window', 'document', multiPageRouter(forIr()))(window, document);
+  const click = (actions) => listeners.click({
+    target: {
+      closest: (selector) => (selector === '[data-actions]'
+        ? { getAttribute: () => JSON.stringify(actions) }
+        : null),
+    },
+  });
+  return { rows, rowTexts, click };
+}
+
+test('router renders rows from the list length and follows list ops', () => {
+  const env = forEnv();
+  assert.equal(env.rows().length, 2, 'boot materializes one row per init element');
+  assert.deepEqual(env.rowTexts().map((entry) => entry.textContent), ['Row a', 'Row b']);
+  env.click([{ op: 'append', target: 'items', value: 'c' }]);
+  assert.equal(env.rows().length, 3, 'append adds a row');
+  assert.equal(env.rowTexts()[2].textContent, 'Row c');
+  env.click([{ op: 'removeAt', target: 'items', value: 0 }]);
+  assert.deepEqual(
+    env.rowTexts().map((entry) => entry.textContent),
+    ['Row b', 'Row c'],
+    'removeAt drops the row',
+  );
+  env.click([{ op: 'assign', target: 'items', value: ['x', 'y', 'z'] }]);
+  assert.equal(env.rows().length, 3, 'assign replaces the rows');
+  env.click([{ op: 'removeAt', target: 'items', value: 9 }]);
+  assert.equal(env.rows().length, 3, 'out-of-range removeAt is a no-op');
+});
+
+test('router materializes restored list rows at boot', () => {
+  const env = forEnv({ items: ['s'] });
+  assert.equal(env.rows().length, 1, 'restore snapshot decides the row count');
+  assert.equal(env.rowTexts()[0].textContent, 'Row s');
 });
