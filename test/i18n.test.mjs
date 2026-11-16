@@ -9,7 +9,7 @@ import test from 'node:test';
 import { catalogOf, expectedDom, interpolate, interpolateCatalog } from '../lib/a11y.mjs';
 import { emitFromIr } from '../lib/emit.mjs';
 import { I18N_FMT, RTL_MIRROR_SRC } from '../lib/page-source.mjs';
-import { cleanup, COUNTER_FIXTURE, ir, multipageIr, node, tmpDir } from '../test-helpers/helpers.mjs';
+import { cleanup, COUNTER_FIXTURE, ir, multipageIr, node, runCli, tmpDir } from '../test-helpers/helpers.mjs';
 
 function emit(value) {
   const dir = tmpDir();
@@ -128,6 +128,61 @@ test('programs without i18n fields emit unchanged bytes and no RTL source', () =
     assert.ok(!html.includes('direction: rtl'));
     assert.ok(!html.includes('opuVisualOrder'));
     assert.ok(!html.includes('function fmt(text, scope) {\n    var input'));
+  } finally {
+    cleanup(dir);
+  }
+});
+
+/* @locale is a reserved patch target (IR_ADDITIONS §15.4): validation must
+ * admit `set @locale`, but the DOM runtime never writes it to its state
+ * mirror — catalogs are fixed at emit time. */
+const localePatchIr = (tag, op = 'set', useFrom = false) => {
+  const home = node(0, 'Column', {}, [
+    node(1, 'Text', { value: 'Hi' }),
+    node(2, 'Button', { label: 'Fr' }, [], {
+      tap: useFrom
+        ? { op, target: '@locale', valueFrom: 'lang' }
+        : { op, target: '@locale', value: tag },
+    }),
+  ]);
+  return multipageIr({ Home: { title: 'Home', tree: home } }, 'Home', {
+    state: [{ name: 'lang', type: 'string', init: 'en' }],
+  });
+};
+
+test('set @locale validates and emits without entering the state mirror', () => {
+  const dir = tmpDir();
+  try {
+    const irFile = `${dir}/locale.opuir.json`;
+    fs.writeFileSync(irFile, `${JSON.stringify(localePatchIr('fr-CH'))}\n`, 'utf8');
+    const out = `${dir}/out`;
+    const run = runCli(['emit', irFile, out]);
+    assert.equal(run.status, 0, run.stderr);
+    const html = fs.readFileSync(`${out}/index.html`, 'utf8');
+    assert.ok(html.includes('data-actions=\'[]\''), 'no runtime state action for a reserved patch');
+    assert.ok(!html.includes('@locale'), 'the patch target never reaches the page');
+    assert.ok(!html.includes('data-bind='), 'no data-bind is synthesized for a patch target');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('reserved @locale rejects other ops, malformed tags and valueFrom', () => {
+  const dir = tmpDir();
+  try {
+    for (const [name, value, expected] of [
+      ['append', localePatchIr('fr', 'append'), /unknown state target "@locale"/],
+      ['a malformed tag', localePatchIr('not a tag!'), /@locale value must be a BCP-47 tag/],
+      ['valueFrom', localePatchIr('fr', 'set', true), /@locale takes a literal tag/],
+    ]) {
+      const irFile = `${dir}/bad.opuir.json`;
+      fs.writeFileSync(irFile, `${JSON.stringify(value)}\n`, 'utf8');
+      const out = `${dir}/out`;
+      const run = runCli(['emit', irFile, out]);
+      assert.equal(run.status, 1, `${name}: ${run.stdout}${run.stderr}`);
+      assert.match(run.stderr, expected);
+      assert.ok(!fs.existsSync(`${out}/index.html`), `${name} must not emit a page`);
+    }
   } finally {
     cleanup(dir);
   }
