@@ -200,10 +200,15 @@ function forIr() {
     node(3, 'Column', { gap: 4 }, [
       node(4, 'Button', { label: 'Add' }, [], { tap: { op: 'append', target: 'items', value: 'x' } }),
       node(5, 'Button', { label: 'Trim' }, [], { tap: { op: 'removeAt', target: 'items', value: 0 } }),
+      node(6, 'Button', { label: 'Replace' }, [], { tap: { op: 'assign', target: 'items', value: ['x', 'y'] } }),
+      node(7, 'Button', { label: 'Merge' }, [], { tap: { op: 'assign', target: 'items', valueFrom: 'backup' } }),
     ]),
   ]);
   return multipageIr({ Home: { title: 'Home', tree: home } }, 'Home', {
-    state: [{ name: 'items', type: 'list', init: ['a', 'b'] }],
+    state: [
+      { name: 'items', type: 'list', init: ['a', 'b'] },
+      { name: 'backup', type: 'list', init: ['s'] },
+    ],
   });
 }
 
@@ -214,8 +219,11 @@ test('multi-page emit lowers For to a data-for template', () => {
     assert.match(html, /data-label="Row \{p\}"/);
     assert.match(html, /&quot;op&quot;:&quot;append&quot;/);
     assert.match(html, /&quot;op&quot;:&quot;removeAt&quot;/);
+    // Both assign spellings validate and reach the page as actions.
+    assert.match(html, /&quot;op&quot;:&quot;assign&quot;/);
+    assert.match(html, /&quot;valueFrom&quot;:&quot;backup&quot;/);
     // The dev client rewrites this declaration in place; keep it intact.
-    assert.match(html, /var state = \{"items":\["a","b"\]\};/);
+    assert.match(html, /var state = \{"items":\["a","b"\],"backup":\["s"\]\};/);
   } finally {
     cleanup(dir);
   }

@@ -87,6 +87,21 @@ emitExpectingFailure('a set action targeting a list state', {
     { name: 's', type: 'list', init: [] },
   ],
 }, /set cannot target list state "items" \(use assign\)/);
+emitExpectingFailure('assign to a non-list state', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'assign', target: 's', value: ['v'] } })),
+  state: [{ name: 's', type: 'string', init: '' }],
+}, /assign target "s" must be list/);
+emitExpectingFailure('assign with a non-string array value', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'assign', target: 'items', value: ['a', 2] } })),
+  state: [{ name: 'items', type: 'list', init: [] }],
+}, /assign requires an array of strings/);
+emitExpectingFailure('assign with a non-list valueFrom', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { op: 'assign', target: 'items', valueFrom: 's' } })),
+  state: [
+    { name: 'items', type: 'list', init: [] },
+    { name: 's', type: 'string', init: '' },
+  ],
+}, /assign valueFrom state "s" must be list/);
 
 test('emit rejects malformed JSON', () => {
   const dir = tmpDir();
