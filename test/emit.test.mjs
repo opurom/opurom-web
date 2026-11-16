@@ -144,3 +144,37 @@ test('CLI emit reports the output path and exits 0', () => {
     cleanup(dir);
   }
 });
+
+test('emit expands a For node statically over the list init', () => {
+  const dir = tmpDir();
+  try {
+    const value = ir(
+      node(0, 'Column', {}, [
+        node(1, 'For', { source: 'items', item: 'p' }, [
+          node(2, 'Text', { value: 'Row {p}' }),
+        ]),
+      ]),
+      { state: [{ name: 'items', type: 'list', init: ['a', 'b'] }] },
+    );
+    emitFromIr(value, dir);
+    const main = fs.readFileSync(path.join(dir, 'index.html'), 'utf8').match(/<main id="app">([\s\S]*?)<\/main>/)[1];
+    assert.match(main, /<div data-node-id="1" role="none" class="node for">/);
+    assert.ok(main.includes('Row a') && main.includes('Row b'), 'one row per init element');
+    assert.equal((main.match(/Row /g) ?? []).length, 2, 'row count follows the list length');
+    assert.ok(!main.includes('{p}'), 'item placeholder must be bound at compile time');
+
+    const empty = ir(
+      node(0, 'Column', {}, [
+        node(1, 'For', { source: 'items', item: 'p' }, [
+          node(2, 'Text', { value: 'Row {p}' }),
+        ]),
+      ]),
+      { state: [{ name: 'items', type: 'list', init: [] }] },
+    );
+    emitFromIr(empty, dir);
+    const emptyMain = fs.readFileSync(path.join(dir, 'index.html'), 'utf8').match(/<main id="app">([\s\S]*?)<\/main>/)[1];
+    assert.ok(!emptyMain.includes('Row '), 'an empty list renders no rows');
+  } finally {
+    cleanup(dir);
+  }
+});
