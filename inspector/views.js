@@ -30,7 +30,12 @@ function badge(channel) {
 }
 
 function channel(title, id, channel_, body) {
-  return `<section class="channel" id="${id}"><h2>${title} ${badge(channel_)}</h2>${body}</section>`;
+  // The relay bumps `version` on every hot-reload ring reset; showing it makes
+  // the reset gap visible per channel (spec: "version makes the gap visible").
+  const version = channel_.version === undefined
+    ? ''
+    : `<span class="metric">ver <b>${field(channel_.version)}</b></span>`;
+  return `<section class="channel" id="${id}"><h2>${title} ${badge(channel_)}${version}</h2>${body}</section>`;
 }
 
 function phase(phaseMs) {

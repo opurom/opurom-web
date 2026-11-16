@@ -15,22 +15,25 @@ const PULL_URLS = {
   network: '/api/inspect/network',
 };
 
-const RING_CAP = 200;
-
 const channels = {
   frames: { availability: 'absent', reason: 'not pulled yet', frames: [], report: null },
   memory: { availability: 'absent', reason: 'not pulled yet', memory: null },
-  network: { availability: 'absent', reason: 'not pulled yet', records: [] },
+  network: { availability: 'absent', reason: 'not pulled yet' },
 };
 
 function render() {
   document.getElementById('inspector').innerHTML = renderInspector(channels);
 }
 
-function push(name, key, record) {
-  const list = channels[name][key];
-  list.push(record);
-  if (list.length > RING_CAP) list.splice(0, list.length - RING_CAP);
+/* Every SSE frame carries a full channel payload (the relay owns the rings),
+ * so the handler mirrors pull: overwrite the channel wholesale. */
+function apply(name, data) {
+  try {
+    channels[name] = { ...channels[name], ...JSON.parse(data) };
+    render();
+  } catch {
+    // A malformed frame keeps the previous channel state.
+  }
 }
 
 async function pull(name) {
@@ -46,18 +49,9 @@ async function pull(name) {
 
 function subscribe() {
   const stream = new EventSource(SSE_URL);
-  stream.addEventListener('frame', (event) => {
-    push('frames', 'frames', JSON.parse(event.data));
-    render();
-  });
-  stream.addEventListener('memory', (event) => {
-    channels.memory = { ...channels.memory, memory: JSON.parse(event.data) };
-    render();
-  });
-  stream.addEventListener('network', (event) => {
-    push('network', 'records', JSON.parse(event.data));
-    render();
-  });
+  stream.addEventListener('frame', (event) => apply('frames', event.data));
+  stream.addEventListener('memory', (event) => apply('memory', event.data));
+  stream.addEventListener('network', (event) => apply('network', event.data));
   stream.onopen = () => {
     for (const name of Object.keys(PULL_URLS)) pull(name);
   };

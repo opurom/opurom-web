@@ -26,6 +26,7 @@ const framesChannel = {
 const memoryChannel = {
   availability: 'partial',
   reason: 'dev-server-computed state and layer bytes',
+  version: 2,
   memory: {
     cache: { budget: 1024, usedBytes: 512, entries: 3 },
     stateBytes: 128,
@@ -38,6 +39,7 @@ const memoryChannel = {
 const networkChannel = {
   availability: 'full',
   reason: '',
+  version: 3,
   records: [
     { id: 0, method: 'GET', url: '/api/items', status: 200, requestBytes: 0, responseBytes: 21, startMs: 5, durationMs: 12 },
   ],
@@ -84,8 +86,17 @@ test('an absent channel renders only the degraded badge and its reason', () => {
   assert.ok(!html.includes('>0<'), 'absent channel never fabricates 0');
 });
 
-test('record values are HTML-escaped', () => {
-  const html = renderNetwork({
+test('the channel version renders so a hot-reload ring reset is visible', () => {
+  assert.match(renderFrames(framesChannel), /ver <b>1<\/b>/);
+  assert.match(renderMemory(memoryChannel), /ver <b>2<\/b>/);
+  assert.match(renderNetwork(networkChannel), /ver <b>3<\/b>/);
+  const absent = renderNetwork({ availability: 'absent', reason: 'no request proxy', version: 4 });
+  assert.match(absent, /ver <b>4<\/b>/, 'version shows even on an absent channel');
+  const bare = renderFrames({ availability: 'full', reason: '' });
+  assert.ok(!bare.includes('ver <b>'), 'no version field means no version claim');
+});
+
+test('record values are HTML-escaped', () => {  const html = renderNetwork({
     availability: 'full',
     reason: '',
     records: [{ id: 0, method: 'GET', url: '/x?next=<script>', status: 200, requestBytes: 0, responseBytes: 0, startMs: 0, durationMs: 1 }],
