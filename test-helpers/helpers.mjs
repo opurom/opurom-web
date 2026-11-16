@@ -57,3 +57,17 @@ export function ir(tree, overrides = {}) {
     ...overrides,
   };
 }
+
+/* Multi-page IR: `routes` maps route name -> {title, tree}; `initialRoute`
+ * names the visible page. Node ids must be globally unique across routes. */
+export function multipageIr(routes, initialRoute, overrides = {}) {
+  return {
+    ir: '0.1.0',
+    app: 'Fixture',
+    state: [],
+    initialRoute,
+    routes,
+    theme: { mode: 'light', accent: '#4F46E5', radius: 12 },
+    ...overrides,
+  };
+}
