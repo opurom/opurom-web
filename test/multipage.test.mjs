@@ -202,12 +202,16 @@ function forIr() {
       node(5, 'Button', { label: 'Trim' }, [], { tap: { op: 'removeAt', target: 'items', value: 0 } }),
       node(6, 'Button', { label: 'Replace' }, [], { tap: { op: 'assign', target: 'items', value: ['x', 'y'] } }),
       node(7, 'Button', { label: 'Merge' }, [], { tap: { op: 'assign', target: 'items', valueFrom: 'backup' } }),
+      node(8, 'Button', { label: 'Load list' }, [], { tap: { async: true, effects: [{ kind: 'fetch', path: '/api/items', into: 'items' }] } }),
+      node(9, 'Button', { label: 'Load title' }, [], { tap: { async: true, effects: [{ kind: 'fetch', path: '/api/title', into: 'title' }] } }),
+      node(10, 'Text', { value: '{title}' }),
     ]),
   ]);
   return multipageIr({ Home: { title: 'Home', tree: home } }, 'Home', {
     state: [
       { name: 'items', type: 'list', init: ['a', 'b'] },
       { name: 'backup', type: 'list', init: ['s'] },
+      { name: 'title', type: 'string', init: 'T' },
     ],
   });
 }
@@ -222,14 +226,16 @@ test('multi-page emit lowers For to a data-for template', () => {
     // Both assign spellings validate and reach the page as actions.
     assert.match(html, /&quot;op&quot;:&quot;assign&quot;/);
     assert.match(html, /&quot;valueFrom&quot;:&quot;backup&quot;/);
+    // Async effects ship as a separate attribute for the effects pipeline.
+    assert.match(html, /data-effects='\[\{&quot;kind&quot;:&quot;fetch&quot;,&quot;path&quot;:&quot;\/api\/items&quot;,&quot;into&quot;:&quot;items&quot;\}\]'/);
     // The dev client rewrites this declaration in place; keep it intact.
-    assert.match(html, /var state = \{"items":\["a","b"\],"backup":\["s"\]\};/);
+    assert.match(html, /var state = \{"items":\["a","b"\],"backup":\["s"\],"title":"T"\};/);
   } finally {
     cleanup(dir);
   }
 });
 
-function forEnv(restore) {
+function forEnv(restore, fetchStub) {
   const listeners = {};
   const column = {
     children: [],
@@ -265,6 +271,7 @@ function forEnv(restore) {
   template.parentNode = column;
   const rows = () => column.children.filter((child) => child.attrs['data-for-row'] === '1');
   const rowTexts = () => rows().flatMap((row) => row.childNodes);
+  const titleText = stubElement({ 'data-node-id': '10', 'data-label': '{title}' }, { textContent: 'T' });
   const document = {
     addEventListener(type, handler) {
       listeners[type] = handler;
@@ -272,21 +279,30 @@ function forEnv(restore) {
     querySelectorAll(selector) {
       if (selector === 'template[data-for]') return [template];
       if (selector === '[data-for-row="1"]') return rows();
-      if (selector === '[data-node-id]') return rowTexts();
+      if (selector === '[data-node-id]') return [titleText, ...rowTexts()];
       if (selector.indexOf('section[data-route]') !== -1) return [];
       return [];
     },
   };
   const window = restore === undefined ? {} : { __Opurom_STATE_RESTORE__: restore };
-  new Function('window', 'document', multiPageRouter(forIr()))(window, document);
-  const click = (actions) => listeners.click({
-    target: {
-      closest: (selector) => (selector === '[data-actions]'
-        ? { getAttribute: () => JSON.stringify(actions) }
-        : null),
-    },
-  });
-  return { rows, rowTexts, click };
+  new Function('window', 'document', 'fetch', multiPageRouter(forIr()))(window, document, fetchStub);
+  const click = (payload) => {
+    const shape = Array.isArray(payload) ? { actions: payload } : payload;
+    listeners.click({
+      target: {
+        closest: (selector) => (
+          selector.indexOf('data-actions') !== -1 || selector.indexOf('data-effects') !== -1
+            ? {
+                getAttribute: (name) => (name === 'data-actions'
+                  ? JSON.stringify(shape.actions ?? [])
+                  : JSON.stringify(shape.effects ?? [])),
+              }
+            : null
+        ),
+      },
+    });
+  };
+  return { rows, rowTexts, title: () => titleText, click };
 }
 
 test('router renders rows from the list length and follows list ops', () => {
@@ -312,4 +328,28 @@ test('router materializes restored list rows at boot', () => {
   const env = forEnv({ items: ['s'] });
   assert.equal(env.rows().length, 1, 'restore snapshot decides the row count');
   assert.equal(env.rowTexts()[0].textContent, 'Row s');
+});
+
+const drain = () =>
+  new Promise((resolve) => setImmediate(resolve)).then(() => new Promise((resolve) => setImmediate(resolve)));
+
+test('router runs async fetch effects and re-renders from the response', async () => {
+  let ok = true;
+  const env = forEnv(undefined, async (path) => ({
+    ok: ok && path !== '/api/never',
+    json: async () => ['q', 'r', 's'],
+    text: async () => 'hello',
+  }));
+  assert.equal(env.title().textContent, 'T', 'title keeps its compile-time bake');
+  env.click({ effects: [{ kind: 'fetch', path: '/api/items', into: 'items' }] });
+  await drain();
+  assert.equal(env.rows().length, 3, 'a list response replaces the rows whole');
+  assert.deepEqual(env.rowTexts().map((entry) => entry.textContent), ['Row q', 'Row r', 'Row s']);
+  env.click({ effects: [{ kind: 'fetch', path: '/api/title', into: 'title' }] });
+  await drain();
+  assert.equal(env.title().textContent, 'hello', 'a text response lands in the string state');
+  ok = false;
+  env.click({ effects: [{ kind: 'fetch', path: '/api/items', into: 'items' }] });
+  await drain();
+  assert.equal(env.rows().length, 3, 'a failed fetch keeps the previous state');
 });

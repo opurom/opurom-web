@@ -102,6 +102,33 @@ emitExpectingFailure('assign with a non-list valueFrom', {
     { name: 's', type: 'string', init: '' },
   ],
 }, /assign valueFrom state "s" must be list/);
+emitExpectingFailure('async effects on a non-tap event', {
+  ...ir(node(0, 'Input', { bind: 's' }, [], { input: { async: true, effects: [{ kind: 'fetch', path: '/x', into: 's' }] } })),
+  state: [{ name: 's', type: 'string', init: '' }],
+}, /only supported on tap events/);
+emitExpectingFailure('effects without async true', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { effects: [{ kind: 'fetch', path: '/x', into: 's' }] } })),
+  state: [{ name: 's', type: 'string', init: '' }],
+}, /effects requires "async": true/);
+emitExpectingFailure('a non-boolean async marker', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { async: 'yes' } })),
+}, /async must be a boolean/);
+emitExpectingFailure('an unknown effect kind', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { async: true, effects: [{ kind: 'hover' }] } })),
+}, /unknown effect kind "hover"/);
+emitExpectingFailure('a delay effect beyond the cap', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { async: true, effects: [{ kind: 'delay', ms: 70000 }] } })),
+}, /0\.\.60000/);
+emitExpectingFailure('a fetch effect into an undeclared state', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { async: true, effects: [{ kind: 'fetch', path: '/x', into: 'ghost' }] } })),
+}, /unknown state "ghost"/);
+emitExpectingFailure('a fetch effect into an int state', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { async: true, effects: [{ kind: 'fetch', path: '/x', into: 'n' }] } })),
+  state: [{ name: 'n', type: 'int', init: 0 }],
+}, /fetch into "n" must be string or list, got int/);
+emitExpectingFailure('a non-array effects list', {
+  ...ir(node(0, 'Button', { label: 'x' }, [], { tap: { async: true, effects: 'fetch' } })),
+}, /effects must be an array/);
 
 test('emit rejects malformed JSON', () => {
   const dir = tmpDir();
