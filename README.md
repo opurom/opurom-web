@@ -153,6 +153,7 @@ Test files (counts are `node --test <file>` totals):
 | `test/invalid-ir.test.mjs` | 41 | 34 IR rejection cases, out-dir/traversal, CLI usage |
 | `test/icon.test.mjs` | 2 | inline SVG icon emission |
 | `test/inspector.test.mjs` | 8 | fixture-driven three-channel views, availability badges, pure-browser bundle scan, CLI assembly |
+| `test/i18n.test.mjs` | 6 | DOM dir/CSS, RTL mirror rules, catalog fallback paths, zero-change goldens |
 
 ## What is verified here
 
