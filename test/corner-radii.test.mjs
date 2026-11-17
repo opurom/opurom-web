@@ -62,6 +62,20 @@ test('elliptical corner emits two equal-length slash groups', () => {
   }
 });
 
+test('omitted node radius falls back to the required theme radius', () => {
+  const partial = emit(boxIr({ cornerRadii: { topLeft: 4 } }));
+  const flattened = emit(boxIr({ radius: 0, cornerRadii: { topLeft: 4 } }));
+  try {
+    // helpers.ir() declares theme.radius = 12; an omitted node radius inherits it.
+    assert.equal(styleOf(partial.html, 0), 'border-radius:4px 12px 12px 12px');
+    // An explicit zero still flattens the three omitted corners.
+    assert.equal(styleOf(flattened.html, 0), 'border-radius:4px 0px 0px 0px');
+  } finally {
+    cleanup(partial.dir);
+    cleanup(flattened.dir);
+  }
+});
+
 test('absent cornerRadii keeps the scalar output byte-identical', () => {
   const value = boxIr({ radius: 9, border: '#AABBCC' });
   const { dir, html } = emit(value);
