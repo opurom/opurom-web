@@ -128,11 +128,11 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 55 tests
+node --test          # 119 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 55 pass, 0 skipped; the real two-engine
+- On the macOS host with both engines: 119 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -155,6 +155,7 @@ Test files (counts are `node --test <file>` totals):
 | `test/inspector.test.mjs` | 8 | fixture-driven three-channel views, availability badges, pure-browser bundle scan, CLI assembly |
 | `test/i18n.test.mjs` | 8 | DOM dir/CSS, RTL mirror rules, catalog fallback paths, @locale patch, zero-change goldens |
 | `test/boundary.test.mjs` | 4 | opt-in containment mapping, tolerant validation, byte-identical goldens |
+| `test/image.test.mjs` | 6 | void img lowering, alt/src escaping, fit fallback, dimension bounds, byte-identical default |
 
 ## What is verified here
 
