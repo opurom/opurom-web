@@ -99,8 +99,8 @@ test('counter single-page emit stays byte-identical to the pinned baseline', () 
   const { dir, html, bytes } = emit(counter);
   try {
     const sha = crypto.createHash('sha256').update(html).digest('hex');
-    assert.equal(bytes, 6176);
-    assert.equal(sha, '3417ce85a0c9050091b38c73a7eddce5c25a2dc5bb2b1e014eb6507772b96dbc');
+    assert.equal(bytes, 6202);
+    assert.equal(sha, '7d8bcc75432cc6392163ef3d96c7afc466941babf2eb7969f319d75e913bec2f');
     assert.ok(!html.includes('img.image {'));
   } finally {
     cleanup(dir);

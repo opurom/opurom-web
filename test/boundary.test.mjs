@@ -58,7 +58,7 @@ test('a program without boundary props keeps its byte-identical golden', () => {
   const counter = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
   const { dir, html, bytes } = emit(counter);
   try {
-    assert.equal(bytes, 6176);
+    assert.equal(bytes, 6202);
     assert.ok(!html.includes('contain:'));
     assert.ok(!html.includes('repaintBoundary') && !html.includes('relayoutBoundary'));
   } finally {

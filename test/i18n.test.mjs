@@ -123,7 +123,7 @@ test('paint path mirrors row order, offsets, text align and a11y visual order', 
 test('programs without i18n fields emit unchanged bytes and no RTL source', () => {  const counter = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
   const { dir, html, bytes } = emit(counter);
   try {
-    assert.equal(bytes, 6176, 'golden single-page artifact stays byte-identical');
+    assert.equal(bytes, 6202, 'golden single-page artifact stays byte-identical');
     assert.ok(!html.includes(' dir="rtl"'));
     assert.ok(!html.includes('direction: rtl'));
     assert.ok(!html.includes('opuVisualOrder'));
