@@ -69,6 +69,13 @@ jobs:
               git clone --depth 1 "https://github.com/opurom/opurom-render.git" opurom-render
               git clone --depth 1 "https://github.com/opurom/opurom-examples.git" opurom-examples
               ;;
+            opurom-web)
+              # Per-corner pixel gate builds the pinned renderer from source.
+              git init opurom-render
+              git -C opurom-render remote add origin https://github.com/opurom/opurom-render.git
+              git -C opurom-render fetch --depth 1 origin 8a76e1dfdddc8b82ed5284cabd2921f17cd73571
+              git -C opurom-render checkout --detach FETCH_HEAD
+              ;;
             opurom-examples)
               for repo in opurom-core opurom-lang opurom-render opurom-cli; do
                 git clone --depth 1 "https://github.com/opurom/${repo}.git" "$repo"
@@ -76,6 +83,9 @@ jobs:
               ;;
             *) ;;
           esac
+      - name: Build pinned render oracle
+        if: matrix.check == 'node-test' && github.event.repository.name == 'opurom-web'
+        run: cargo build --release --manifest-path ../opurom-render/Cargo.toml --bin opurom-render
       - name: Run ${{ matrix.check }}
         run: node .github/scripts/ci-check.mjs ${{ matrix.check }}
 

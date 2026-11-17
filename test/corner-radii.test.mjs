@@ -15,6 +15,7 @@ import { cleanup, COUNTER_FIXTURE, ir, node, tmpDir } from '../test-helpers/help
 
 const RENDER_ROOT = path.resolve('../opurom-render');
 const RENDER_BIN = path.join(RENDER_ROOT, 'target/release/opurom-render');
+const RENDER_DEBUG_BIN = path.join(RENDER_ROOT, 'target/debug/opurom-render');
 const FIXTURES = path.join(RENDER_ROOT, 'tests/fixtures');
 
 function emit(value) {
@@ -112,8 +113,10 @@ function parsePpm(file) {
 function renderPpm(irFile, outFile) {
   const binary = fs.existsSync(RENDER_BIN)
     ? RENDER_BIN
-    : path.join(RENDER_ROOT, 'target/debug/opurom-render');
-  if (!fs.existsSync(binary)) return null;
+    : RENDER_DEBUG_BIN;
+  // No silent skip: a missing oracle is a broken gate, not a green run.
+  assert.ok(fs.existsSync(binary), `opurom-render binary missing: ${binary}`);
+  assert.ok(fs.existsSync(irFile), `render fixture missing: ${irFile}`);
   const run = spawnSync(binary, [irFile, '120', '120', outFile], { encoding: 'utf8' });
   assert.equal(run.status, 0, run.stderr);
   return parsePpm(outFile);
@@ -123,7 +126,6 @@ function compareWithOracle(irFile, rawCorners, label) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'web-corner-oracle-'));
   try {
     const ppm = renderPpm(irFile, path.join(dir, 'out.ppm'));
-    if (ppm === null) return null;
     assert.equal(ppm.width, 120);
     assert.equal(ppm.height, 120);
     const corners = scaleCorners(rawCorners, 80, 80);
@@ -148,7 +150,7 @@ function compareWithOracle(irFile, rawCorners, label) {
   }
 }
 
-test('per-corner containment equals opurom-render software raster', { skip: !fs.existsSync(RENDER_BIN) }, () => {
+test('per-corner containment equals opurom-render software raster', () => {
   const four = compareWithOracle(
     path.join(FIXTURES, 'corner-radii-four.json'),
     {
@@ -165,10 +167,8 @@ test('per-corner containment equals opurom-render software raster', { skip: !fs.
     },
     'elliptical',
   );
-  for (const result of [four, elliptical]) {
-    assert.ok(result !== null, 'render oracle must be available for this test');
-    assert.equal(result.diff, 0);
-  }
+  assert.equal(four.diff, 0);
+  assert.equal(elliptical.diff, 0);
 });
 
 test('border inset shrinks each corner by borderSize', () => {
