@@ -128,11 +128,11 @@ PASS: Chromium and WebKit measured digests both equal independent Node CPU refer
 ## Tests
 
 ```sh
-node --test          # 139 tests
+node --test          # 145 tests
 npm run check        # node --check on every .mjs
 ```
 
-- On the macOS host with both engines: 139 pass, 0 skipped; the real two-engine
+- On the macOS host with both engines: 145 pass, 0 skipped; the real two-engine
   CLI test measures both engines.
 - On a host missing an engine, the affected real-browser tests skip with a
   concrete reason; every other test still runs and must pass.
@@ -159,6 +159,7 @@ Test files (counts are `node --test <file>` totals):
 | `test/layout.test.mjs` | 6 | explicit width/height, non-wrapping row, main-axis alignment, pinned golden |
 | `test/visual.test.mjs` | 6 | radius/border/fill/shadow/opacity mapping, bounds, pinned golden |
 | `test/fill.test.mjs` | 8 | gradient direction and fallback, glass class rule, dark variant, pinned golden |
+| `test/corner-radii.test.mjs` | 6 | named CSS corner order, elliptical slash syntax, byte gate, render pixel oracle |
 
 ## What is verified here
 
