@@ -53,6 +53,24 @@ test('align maps to cross and main axis; stretch stays cross-axis only', () => {
   }
 });
 
+test('declared padding reaches button and input, not just div', () => {
+  const value = ir(node(0, 'Column', {}, [
+    node(1, 'Button', { label: 'Save', padding: 12, radius: 20 }),
+    node(2, 'Button', { label: 'Bad', padding: -1 }),
+    node(3, 'Input', { placeholder: 'name', padding: 8 }),
+  ]));
+  const { dir, html } = emit(value);
+  try {
+    assert.equal(styleOf(html, 1), 'padding:12px; border-radius:20px');
+    assert.equal(styleOf(html, 2), '');
+    assert.equal(styleOf(html, 3), 'padding:8px');
+    // Without a declared padding a button keeps the global 8px 16px rule.
+    assert.doesNotMatch(html, /<button[^>]*style="[^"]*padding:8px 16px/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('row CSS never wraps and keeps the remaining flex defaults', () => {
   const { dir, html } = emit(ir(node(0, 'Row', {}, [])));
   try {
