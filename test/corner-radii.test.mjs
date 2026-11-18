@@ -91,9 +91,9 @@ test('counter fixture stays byte-identical with no cornerRadii', () => {
   const counter = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
   const { dir, html, bytes } = emit(counter);
   try {
-    assert.equal(bytes, 6202);
+    assert.equal(bytes, 6541);
     assert.equal(crypto.createHash('sha256').update(html).digest('hex'),
-      '7d8bcc75432cc6392163ef3d96c7afc466941babf2eb7969f319d75e913bec2f');
+      'e13a842580499564309df329e309211eaf6ce553d7dbbbb7ff6a574d91a6b71a');
   } finally {
     cleanup(dir);
   }

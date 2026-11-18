@@ -34,8 +34,8 @@ test('emit produces semantic header/main/button/canvas structure', () => {
     assert.match(html, /<header class="app-header">/);
     assert.match(html, /<h1>Counter<\/h1>/);
     assert.match(html, /<main id="app">/);
-    assert.match(html, /<button data-node-id="3" role="button" class="node button" type="button">-<\/button>/);
-    assert.match(html, /<button data-node-id="4" role="button" class="node button" type="button">\+<\/button>/);
+    assert.match(html, /<button data-node-id="3" role="button" class="node button" data-ink-host="3" type="button">-<\/button>/);
+    assert.match(html, /<button data-node-id="4" role="button" class="node button" data-ink-host="4" type="button">\+<\/button>/);
     assert.match(html, /<canvas id="fx" width="480" height="270" role="img"/);
     assert.match(html, /<style>/);
   } finally {

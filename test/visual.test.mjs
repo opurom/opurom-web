@@ -90,8 +90,8 @@ test('a program without visual props keeps its byte-identical golden', () => {
   const { dir, html, bytes } = emit(counter);
   try {
     const sha = crypto.createHash('sha256').update(html).digest('hex');
-    assert.equal(bytes, 6202);
-    assert.equal(sha, '7d8bcc75432cc6392163ef3d96c7afc466941babf2eb7969f319d75e913bec2f');
+    assert.equal(bytes, 6541);
+    assert.equal(sha, 'e13a842580499564309df329e309211eaf6ce553d7dbbbb7ff6a574d91a6b71a');
   } finally {
     cleanup(dir);
   }
