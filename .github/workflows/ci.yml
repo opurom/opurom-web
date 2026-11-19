@@ -73,7 +73,7 @@ jobs:
               # Per-corner pixel gate builds the pinned renderer from source.
               git init opurom-render
               git -C opurom-render remote add origin https://github.com/opurom/opurom-render.git
-              git -C opurom-render fetch --depth 1 origin 8a76e1dfdddc8b82ed5284cabd2921f17cd73571
+              git -C opurom-render fetch --depth 1 origin b7dfdf6fcb588df15adac83a574ae625df6dcb18
               git -C opurom-render checkout --detach FETCH_HEAD
               ;;
             opurom-examples)
