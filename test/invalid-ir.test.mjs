@@ -33,6 +33,10 @@ emitExpectingFailure('non pre-order node ids', ir(node(7, 'Column')), /breaks pr
 emitExpectingFailure('a duplicate pre-order id', ir(node(0, 'Column', {}, [node(0, 'Text', { value: 'x' })])), /breaks pre-order sequence/);
 emitExpectingFailure('an unknown state type', { ...ir(node(0, 'Column')), state: [{ name: 'x', type: 'float', init: 1 }] }, /unknown type "float"/);
 emitExpectingFailure('an init that does not match its type', { ...ir(node(0, 'Column')), state: [{ name: 'x', type: 'int', init: 1.5 }] }, /does not match type int/);
+emitExpectingFailure('a malformed md-sys color token', {
+  ...ir(node(0, 'Text', { value: 'x' })),
+  theme: { mode: 'light', accent: '#097FEB', radius: 0, tokens: { 'md-sys-color-primary': 'red' } },
+}, /md-sys-color-primary.*#RRGGBB/);
 emitExpectingFailure('a bad accent color', { ...ir(node(0, 'Column')), theme: { mode: 'light', accent: 'red', radius: 1 } }, /must be #RRGGBB/);
 emitExpectingFailure('an unknown a11y role', ir(node(0, 'Column', { role: 'banner' })), /unknown a11y role "banner"/);
 emitExpectingFailure('an out-of-range fontScale', ir(node(0, 'Text', { value: 'x', fontScale: 9 })), /fontScale .* 0\.5\.\.3\.0/);
