@@ -13,7 +13,7 @@ import { findBrowser } from '../lib/browser.mjs';
 import { referenceDigest } from '../lib/cpu-reference.mjs';
 import { gradientSpec } from '../lib/contract.mjs';
 import { expectedStyles, compareFacts, parseFacts, verify } from '../lib/verify.mjs';
-import { COUNTER_FIXTURE, ir, multipageIr, node, runCli, tmpDir, cleanup, writeJson } from '../test-helpers/helpers.mjs';
+import { BROWSER_RUN_TIMEOUT_MS, COUNTER_FIXTURE, ir, multipageIr, node, runCli, tmpDir, cleanup, writeJson } from '../test-helpers/helpers.mjs';
 
 const counterIr = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
 
@@ -115,7 +115,7 @@ test('CLI verify asserts digest/roles/styles when a browser is available', (t) =
   }
   const dir = tmpDir();
   try {
-    const run = runCli(['verify', COUNTER_FIXTURE, dir], { timeout: 120_000 });
+    const run = runCli(['verify', COUNTER_FIXTURE, dir], { timeout: BROWSER_RUN_TIMEOUT_MS });
     assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
     // A browser binary can exist but be unable to render (headless timeout on a
     // constrained runner). That is a documented SKIP, not a failed assertion.
@@ -182,7 +182,7 @@ function verifyForIr(name, buildIr, expectedRoles) {
     try {
       const irFile = path.join(dir, 'for.opuir.json');
       writeJson(irFile, buildIr());
-      const run = runCli(['verify', irFile, path.join(dir, 'out')], { timeout: 120_000 });
+      const run = runCli(['verify', irFile, path.join(dir, 'out')], { timeout: BROWSER_RUN_TIMEOUT_MS });
       assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
       if (/SKIP: headless browser could not render the page here/.test(run.stdout)) return;
       assert.match(run.stdout, /^PASS: verified canvas digest/m);

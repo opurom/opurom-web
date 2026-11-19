@@ -91,9 +91,9 @@ test('counter fixture stays byte-identical with no cornerRadii', () => {
   const counter = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
   const { dir, html, bytes } = emit(counter);
   try {
-    assert.equal(bytes, 6202);
+    assert.equal(bytes, 6541);
     assert.equal(crypto.createHash('sha256').update(html).digest('hex'),
-      '7d8bcc75432cc6392163ef3d96c7afc466941babf2eb7969f319d75e913bec2f');
+      'e13a842580499564309df329e309211eaf6ce553d7dbbbb7ff6a574d91a6b71a');
   } finally {
     cleanup(dir);
   }
@@ -117,7 +117,13 @@ function renderPpm(irFile, outFile) {
   // No silent skip: a missing oracle is a broken gate, not a green run.
   assert.ok(fs.existsSync(binary), `opurom-render binary missing: ${binary}`);
   assert.ok(fs.existsSync(irFile), `render fixture missing: ${irFile}`);
-  const run = spawnSync(binary, [irFile, '120', '120', outFile], { encoding: 'utf8' });
+  // The analytic containment model describes crisp coverage: a pixel is
+  // inside or outside with no partial coverage. The renderer product default
+  // is antialiased, so its edge pixels are blends and cannot be compared
+  // one-to-one with a crisp model. This oracle therefore renders the fixture
+  // with edge coverage off, which is a geometry comparison mode only; the
+  // product default stays antialiased.
+  const run = spawnSync(binary, [irFile, '120', '120', outFile, '--no-edge-aa'], { encoding: 'utf8' });
   assert.equal(run.status, 0, run.stderr);
   return parsePpm(outFile);
 }

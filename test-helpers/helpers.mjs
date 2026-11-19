@@ -10,6 +10,13 @@ export const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const BIN = path.join(ROOT, 'bin', 'opurom-web.mjs');
 export const COUNTER_FIXTURE = path.join(ROOT, 'fixtures', 'counter.opuir.json');
 
+/* The CLI bounds every browser engine run to 30 s and the two-engine matrix
+ * runs both engines, so a browser-backed run has a bounded worst case of
+ * about a minute plus process start-up. This harness timeout only exists so
+ * a misbehaving CLI cannot hang the suite, so it sits well above that
+ * bounded worst case and asserts nothing about the result. */
+export const BROWSER_RUN_TIMEOUT_MS = 240_000;
+
 /* Runs the real CLI in a child process. A spawnSync timeout guarantees the
  * suite can never hang even if the CLI itself misbehaves. */
 export function runCli(args, { env, timeout = 90_000, cwd = ROOT } = {}) {

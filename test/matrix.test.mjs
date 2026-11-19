@@ -15,7 +15,7 @@ import { buildMatrixReport, verifyMatrix } from '../lib/matrix.mjs';
 import { gradientSpec } from '../lib/contract.mjs';
 import { expectedStyles } from '../lib/verify.mjs';
 import { findWebKit, runWebKit } from '../lib/webkit.mjs';
-import { COUNTER_FIXTURE, ROOT, runCli, tmpDir, cleanup } from '../test-helpers/helpers.mjs';
+import { BROWSER_RUN_TIMEOUT_MS, COUNTER_FIXTURE, ROOT, runCli, tmpDir, cleanup } from '../test-helpers/helpers.mjs';
 
 const counterIr = JSON.parse(fs.readFileSync(COUNTER_FIXTURE, 'utf8'));
 const contract = gradientSpec(counterIr);
@@ -144,7 +144,7 @@ test('CLI verify --matrix measures both real engines against the CPU reference',
   }
   const dir = tmpDir();
   try {
-    const run = runCli(['verify', '--matrix', COUNTER_FIXTURE, dir], { timeout: 120_000 });
+    const run = runCli(['verify', '--matrix', COUNTER_FIXTURE, dir], { timeout: BROWSER_RUN_TIMEOUT_MS });
     assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
     assert.match(run.stdout, new RegExp(`^cpu-digest: ${cpuDigest}$`, 'm'));
     for (const name of ['chromium', 'webkit']) {
@@ -171,7 +171,7 @@ printf '<html><head><meta id="opurom-verify" data-result="%s" data-ready="1"></h
     fs.chmodSync(fakeBrowser, 0o755);
     const run = runCli(['verify', '--matrix', COUNTER_FIXTURE, path.join(dir, 'out')], {
       env: { Opurom_BROWSER: fakeBrowser, OPR_FAKE_B64: encoded },
-      timeout: 120_000,
+      timeout: BROWSER_RUN_TIMEOUT_MS,
     });
     assert.equal(run.status, 1, `${run.stdout}\n${run.stderr}`);
     assert.match(run.stdout, /^chromium: digest=0000000000000000 equals-cpu-reference=false roles=5 styles=6$/m);
