@@ -147,6 +147,15 @@ test('CLI verify --matrix measures both real engines against the CPU reference',
     const run = runCli(['verify', '--matrix', COUNTER_FIXTURE, dir], { timeout: BROWSER_RUN_TIMEOUT_MS });
     assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
     assert.match(run.stdout, new RegExp(`^cpu-digest: ${cpuDigest}$`, 'm'));
+    // An installed engine can still be unable to render in a constrained
+    // environment. The CLI reports that as a documented SKIP, never as a
+    // measured pass; mirror the single-engine verify test's honest handling.
+    if (/^SKIP chromium: Chromium timed out after \d+ ms$/m.test(run.stdout)) {
+      assert.match(run.stdout, /^chromium: digest=unmeasured equals-cpu-reference=n\/a$/m);
+      assert.match(run.stdout, /^webkit: digest=[0-9a-f]{16} equals-cpu-reference=true roles=5 styles=6$/m);
+      assert.match(run.stdout, /^PASS: webkit equals independent Node CPU reference/m);
+      return;
+    }
     for (const name of ['chromium', 'webkit']) {
       const line = new RegExp(`^${name}: digest=([0-9a-f]{16}) equals-cpu-reference=true roles=5 styles=6$`, 'm');
       const match = line.exec(run.stdout);

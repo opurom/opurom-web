@@ -85,12 +85,12 @@ test('multi-page rejects duplicate node ids across routes', () => {
   assert.throws(() => validateIr(ir), /pre-order sequence|duplicate node id/);
 });
 
-test('multi-page rejects non-contiguous node id space', () => {
+test('multi-page rejects a non-contiguous id run inside one route', () => {
   const ir = twoRouteIr();
-  ir.routes.Detail.tree.id = 10; // gap from 6..9
-  ir.routes.Detail.tree.children[0].id = 11;
+  // The global space may carry one hole per folded route boundary, but each
+  // route's own ids must stay a dense run from its root.
   ir.routes.Detail.tree.children[1].id = 12;
-  assert.throws(() => validateIr(ir), /not contiguous/);
+  assert.throws(() => validateIr(ir), /not contiguous|breaks pre-order/);
 });
 
 function restoreIr() {
