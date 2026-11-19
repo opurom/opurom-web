@@ -81,6 +81,22 @@ test('row CSS never wraps and keeps the remaining flex defaults', () => {
   }
 });
 
+test('flex weight reaches CSS only when declared', () => {
+  const value = ir(node(0, 'Column', {}, [
+    node(1, 'Container', { flex: 2 }, []),
+    node(2, 'Container', { flex: 0 }, []),
+    node(3, 'Container', {}, []),
+  ]));
+  const { dir, html } = emit(value);
+  try {
+    assert.equal(styleOf(html, 1), 'flex:2');
+    assert.equal(styleOf(html, 2), '');
+    assert.equal(styleOf(html, 3), '');
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('source-bearing Image keeps width/height as attributes, not CSS pixels', () => {
   const { dir, html } = emit(ir(node(0, 'Column', {}, [
     node(1, 'Image', { src: 'a.png', width: 80, height: 40, fit: 'cover' }),
